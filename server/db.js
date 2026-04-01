@@ -1,32 +1,34 @@
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
 const dataDir = path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
-const db = new Database(path.join(dataDir, 'prints.db'));
+const dbPath = path.join(dataDir, 'prints.json');
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS prints (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_code TEXT,
-    position_id TEXT,
-    timestamp TEXT
-  )
-`);
+function readAll() {
+  if (!fs.existsSync(dbPath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeAll(records) {
+  fs.writeFileSync(dbPath, JSON.stringify(records, null, 2));
+}
 
 function logPrint({ order, positionid, timestamp }) {
-  db.prepare(`
-    INSERT INTO prints (order_code, position_id, timestamp)
-    VALUES (?, ?, ?)
-  `).run(order, positionid, timestamp);
+  const records = readAll();
+  const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
+  records.push({ id, order_code: order, position_id: positionid, timestamp });
+  writeAll(records);
 }
 
 function getRecentPrints(limit = 50) {
-  return db.prepare(`
-    SELECT * FROM prints ORDER BY id DESC LIMIT ?
-  `).all(limit);
+  const records = readAll();
+  return records.slice(-limit).reverse();
 }
 
 module.exports = { logPrint, getRecentPrints };

@@ -2,34 +2,113 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Gate Print Service</title>
+  <title>Pretix Print Service</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Gate Print Service</h1>
 
-  <section>
-    <label>Printer:</label>
-    <select id="printerSelect"></select>
-    <button id="testPrintBtn">Test Print</button>
-  </section>
+  <div class="app-header">
+    <h1>Pretix Print Service</h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="config">Configurazione</button>
+    </nav>
+  </div>
 
-  <section>
-    <label>
-      <input type="checkbox" id="autoPrintToggle" checked>
-      Auto-print on check-in
-    </label>
-  </section>
+  <div class="app-content">
 
-  <section>
-    <h2>Print Log</h2>
-    <table id="logTable">
-      <thead>
-        <tr><th>#</th><th>Order</th><th>Position</th><th>Timestamp</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <!-- ── Dashboard ─────────────────────────────────── -->
+    <div id="tab-dashboard" class="tab-pane active">
+
+      <div class="row">
+        <label>Stampante:</label>
+        <select id="printerSelect"></select>
+        <button id="testPrintBtn">Test Print</button>
+      </div>
+
+      <div class="row">
+        <label>
+          <input type="checkbox" id="autoPrintToggle" checked>
+          Stampa automatica al check-in
+        </label>
+      </div>
+
+      <div class="log-section">
+        <h2>Log di stampa</h2>
+        <table id="logTable">
+          <thead>
+            <tr><th>#</th><th>Ordine</th><th>Posizione</th><th>Timestamp</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- ── Configurazione ─────────────────────────────── -->
+    <div id="tab-config" class="tab-pane">
+
+      <h2>Configurazione Pretix</h2>
+      <p class="config-intro">I parametri vengono salvati in automatico nell'app e ricaricati ad ogni avvio — non è necessario modificare il file .env manualmente.</p>
+
+      <form id="configForm">
+
+        <div class="form-group">
+          <label>API Token</label>
+          <input type="password" id="cfg-PRETIX_API_TOKEN" autocomplete="off" placeholder="Token_xxxxxxxx">
+          <small>pretix admin → Impostazioni → Team → API token &nbsp;(permesso richiesto: <b>Leggi ordini</b>)</small>
+        </div>
+
+        <div class="form-group">
+          <label>Organizer Slug</label>
+          <input type="text" id="cfg-PRETIX_ORGANIZER" autocomplete="off" placeholder="nome-organizzatore">
+          <small>Visibile nell'URL: pretix.eu/orga/<b>nome-organizzatore</b>/</small>
+        </div>
+
+        <div class="form-group">
+          <label>Event Slug</label>
+          <input type="text" id="cfg-PRETIX_EVENT" autocomplete="off" placeholder="nome-evento-2026">
+          <small>Visibile nell'URL: pretix.eu/orga/nome-organizzatore/<b>nome-evento</b>/</small>
+        </div>
+
+        <div class="form-group">
+          <label>Webhook Secret</label>
+          <input type="password" id="cfg-PRETIX_WEBHOOK_SECRET" autocomplete="off" placeholder="secret_xxxxxxxx">
+          <small>pretix admin → Impostazioni → Webhook → chiave di firma (la scegli tu al momento della creazione)</small>
+        </div>
+
+        <div class="form-group">
+          <label>Porta Webhook</label>
+          <input type="number" id="cfg-WEBHOOK_PORT" placeholder="3000" min="1024" max="65535">
+          <small>Porta su cui ascolta il server (default: 3000). Una modifica richiede il riavvio dell'app.</small>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="saveConfigBtn">Salva configurazione</button>
+          <span id="saveStatus"></span>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+
+  <!-- ── Status bar ──────────────────────────────────── -->
+  <div class="status-bar">
+    <span class="status-item" id="status-api">
+      <span class="dot"></span>
+      <span class="status-label">API Pretix</span>
+    </span>
+    <span class="status-item" id="status-organizer">
+      <span class="dot"></span>
+      <span class="status-label">Organizer</span>
+    </span>
+    <span class="status-item" id="status-event">
+      <span class="dot"></span>
+      <span class="status-label">Evento</span>
+    </span>
+    <span class="status-refresh" id="statusRefreshBtn" title="Aggiorna stato">↻</span>
+  </div>
 
   <script src="renderer.js"></script>
 </body>

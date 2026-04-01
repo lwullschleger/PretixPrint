@@ -1,17 +1,15 @@
 {
-  "name": "pretix-gate-print",
+  "name": "pretix-print-service",
   "version": "1.0.0",
   "description": "Automatically print tickets when checking in with Pretix",
   "main": "electron.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node launch.js",
     "build": "electron-builder --win"
   },
   "dependencies": {
     "axios": "^1.7.0",
-    "better-sqlite3": "^11.0.0",
-    "dotenv": "^16.4.0",
-    "express": "^4.21.0",
+"express": "^4.21.0",
     "pdf-to-printer": "^5.6.0",
     "pdfkit": "^0.15.0"
   },
@@ -21,7 +19,7 @@
   },
   "build": {
     "appId": "com.pretix.gateprint",
-    "productName": "Pretix Gate Print",
+    "productName": "Pretix Print Service",
     "win": {
       "target": "nsis"
     },

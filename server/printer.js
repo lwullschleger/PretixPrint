@@ -25,22 +25,63 @@ async function downloadAndPrint(pdfBuffer) {
 
 async function testPrint() {
   const PDFDocument = require('pdfkit');
+  const { getConfig } = require('./config');
+  const { checkStatus } = require('./pretixApi');
+
+  const cfg = getConfig();
+  let status = { api: false, organizer: false, event: false };
+  try { status = await checkStatus(); } catch {}
+
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: [226, 150] });
+    const W = 255; // ~90mm width
+    const doc = new PDFDocument({ size: [W, 175], margin: 14 });
     const chunks = [];
-    doc.on('data', (c) => chunks.push(c));
+    doc.on('data', c => chunks.push(c));
     doc.on('end', async () => {
       try {
         await downloadAndPrint(Buffer.concat(chunks));
         resolve();
-      } catch (err) {
-        reject(err);
-      }
+      } catch (err) { reject(err); }
     });
-    doc.fontSize(16).text('Test Print', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(10).text(`Pretix Gate Print`, { align: 'center' });
-    doc.text(new Date().toLocaleString(), { align: 'center' });
+
+    const separator = () => {
+      doc.moveDown(0.3);
+      doc.moveTo(14, doc.y).lineTo(W - 14, doc.y).lineWidth(0.5).stroke();
+      doc.moveDown(0.3);
+    };
+
+    const statusTag = ok => ok ? '[  OK  ]' : '[  --  ]';
+
+    // ── Titolo ───────────────────────────────────────
+    doc.fontSize(12).font('Helvetica-Bold')
+       .text('PRETIX PRINT SERVICE', { align: 'center' });
+    doc.fontSize(7).font('Helvetica')
+       .text('Pagina di test', { align: 'center' });
+
+    separator();
+
+    // ── Configurazione ───────────────────────────────
+    doc.fontSize(7).font('Helvetica-Bold').text('CONFIGURAZIONE');
+    doc.fontSize(7).font('Helvetica');
+    doc.text(`Organizer : ${cfg.PRETIX_ORGANIZER || '—'}`);
+    doc.text(`Evento    : ${cfg.PRETIX_EVENT    || '—'}`);
+    doc.text(`Porta     : ${cfg.WEBHOOK_PORT    || '3000'}`);
+
+    separator();
+
+    // ── Stato connessione ────────────────────────────
+    doc.fontSize(7).font('Helvetica-Bold').text('STATO CONNESSIONE');
+    doc.fontSize(7).font('Helvetica');
+    doc.text(`${statusTag(status.api)}       API Pretix`);
+    doc.text(`${statusTag(status.organizer)} Organizer`);
+    doc.text(`${statusTag(status.event)}     Evento`);
+
+    separator();
+
+    // ── Timestamp ────────────────────────────────────
+    doc.fontSize(6).font('Helvetica')
+       .text(new Date().toLocaleString('it-IT'), { align: 'center' });
+
     doc.end();
   });
 }
