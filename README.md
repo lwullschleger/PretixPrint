@@ -1,2 +1,2 @@
 # PretixPrint
-Pront automatically tickets when checking in with Pretix
+Print automatically tickets when checking in with PretixScan
