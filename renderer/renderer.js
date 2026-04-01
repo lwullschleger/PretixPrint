@@ -14,6 +14,20 @@ async function init() {
 
   select.addEventListener('change', () => window.api.setPrinter(select.value));
 
+  // Test print button
+  const btn = document.getElementById('testPrintBtn');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Printing...';
+    try {
+      await window.api.testPrint();
+      btn.textContent = 'Done!';
+    } catch {
+      btn.textContent = 'Failed';
+    }
+    setTimeout(() => { btn.textContent = 'Test Print'; btn.disabled = false; }, 2000);
+  });
+
   // Auto-print toggle
   const toggle = document.getElementById('autoPrintToggle');
   toggle.addEventListener('change', () => window.api.setAutoPrint(toggle.checked));

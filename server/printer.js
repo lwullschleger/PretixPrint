@@ -23,4 +23,26 @@ async function downloadAndPrint(pdfBuffer) {
   fs.unlinkSync(tmpPath);
 }
 
-module.exports = { downloadAndPrint, setSelectedPrinter, getSelectedPrinter };
+async function testPrint() {
+  const PDFDocument = require('pdfkit');
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: [226, 150] });
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('end', async () => {
+      try {
+        await downloadAndPrint(Buffer.concat(chunks));
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+    doc.fontSize(16).text('Test Print', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(10).text(`Pretix Gate Print`, { align: 'center' });
+    doc.text(new Date().toLocaleString(), { align: 'center' });
+    doc.end();
+  });
+}
+
+module.exports = { downloadAndPrint, setSelectedPrinter, getSelectedPrinter, testPrint };
