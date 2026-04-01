@@ -431,8 +431,8 @@ I parametri vengono salvati in `data/config.json` e ricaricati automaticamente a
 | Parametro | Dove trovarlo |
 |---|---|
 | API Token | pretix admin → Impostazioni → Team → API token (permesso: Leggi ordini) |
-| Organizer Slug | Nell'URL: `pretix.eu/orga/`**questo-qui**`/` |
-| Event Slug | Nell'URL: `pretix.eu/orga/nome/`**questo-qui**`/` |
+| Organizer Slug | Nell'URL: `pretix.eu/control/event/`**organizer**`/evento/` |
+| Event Slug | Nell'URL: `pretix.eu/control/event/organizer/`**evento**`/` |
 | Webhook Secret | pretix admin → Impostazioni → Webhook → chiave di firma |
 | Porta Webhook | Default: 3000 (cambia solo se la porta è già occupata) |
 
