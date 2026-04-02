@@ -72,15 +72,9 @@
         </div>
 
         <div class="form-group">
-          <label>Webhook Secret</label>
-          <input type="password" id="cfg-PRETIX_WEBHOOK_SECRET" autocomplete="off" placeholder="secret_xxxxxxxx">
-          <small>pretix admin → Impostazioni → Webhook → chiave di firma (la scegli tu al momento della creazione)</small>
-        </div>
-
-        <div class="form-group">
-          <label>Porta Webhook</label>
-          <input type="number" id="cfg-WEBHOOK_PORT" placeholder="3000" min="1024" max="65535">
-          <small>Porta su cui ascolta il server (default: 3000). Una modifica richiede il riavvio dell'app.</small>
+          <label>Intervallo polling (secondi)</label>
+          <input type="number" id="cfg-POLL_INTERVAL" placeholder="5" min="1" max="60">
+          <small>Ogni quanti secondi l'app interroga Pretix per nuovi check-in (default: 5). Una modifica richiede il riavvio dell'app.</small>
         </div>
 
         <div class="form-actions">
