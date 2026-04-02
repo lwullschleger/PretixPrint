@@ -6,7 +6,7 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
 const configPath = path.join(dataDir, 'config.json');
 
-const KEYS = ['PRETIX_API_TOKEN', 'PRETIX_WEBHOOK_SECRET', 'PRETIX_ORGANIZER', 'PRETIX_EVENT', 'WEBHOOK_PORT'];
+const KEYS = ['PRETIX_API_TOKEN', 'PRETIX_ORGANIZER', 'PRETIX_EVENT', 'POLL_INTERVAL'];
 
 // Returns merged config: data/config.json takes priority over process.env (from .env)
 function getConfig() {

@@ -43,4 +43,14 @@ async function checkStatus() {
   }
 }
 
-module.exports = { getTicketPDF, checkStatus };
+async function getRecentCheckins(since) {
+  const { PRETIX_ORGANIZER: ORG, PRETIX_EVENT: EVENT, PRETIX_API_TOKEN: TOKEN } = getConfig();
+  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/checkins/`;
+  const response = await axios.get(url, {
+    headers: { Authorization: `Token ${TOKEN}` },
+    params: { datetime_since: since, ordering: 'datetime', type: 'entry' }
+  });
+  return response.data.results;
+}
+
+module.exports = { getTicketPDF, checkStatus, getRecentCheckins };

@@ -65,7 +65,7 @@ async function testPrint() {
     doc.fontSize(7).font('Helvetica');
     doc.text(`Organizer : ${cfg.PRETIX_ORGANIZER || '—'}`);
     doc.text(`Evento    : ${cfg.PRETIX_EVENT    || '—'}`);
-    doc.text(`Porta     : ${cfg.WEBHOOK_PORT    || '3000'}`);
+    doc.text(`Polling   : ${cfg.POLL_INTERVAL   || '5'}s`);
 
     separator();
 

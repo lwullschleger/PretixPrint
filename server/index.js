@@ -1,59 +1,33 @@
-const express = require('express');
-const crypto = require('crypto');
 const { downloadAndPrint } = require('./printer');
 const { logPrint } = require('./db');
-const { getTicketPDF } = require('./pretixApi');
-
-const app = express();
-
-app.use(express.json({
-  verify: (req, res, buf) => { req.rawBody = buf; }
-}));
+const { getTicketPDF, getRecentCheckins } = require('./pretixApi');
+const { getConfig } = require('./config');
 
 let autoPrint = true;
+let lastPollTime = new Date().toISOString();
+let pollTimer = null;
 
-function verifySignature(req) {
-  const secret = process.env.PRETIX_WEBHOOK_SECRET;
-  if (!secret) return true; // non configurato, skip
-  const signature = req.headers['x-pretix-signature'];
-  if (!signature) return false;
-  const expected = crypto
-    .createHmac('sha256', secret)
-    .update(req.rawBody)
-    .digest('hex');
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(expected, 'hex')
-    );
-  } catch {
-    return false;
-  }
+function startPolling() {
+  const intervalMs = (parseInt(getConfig().POLL_INTERVAL) || 5) * 1000;
+  pollTimer = setInterval(async () => {
+    const since = lastPollTime;
+    const now = new Date().toISOString();
+    try {
+      const checkins = await getRecentCheckins(since);
+      lastPollTime = now;
+      for (const checkin of checkins) {
+        if (!autoPrint) continue;
+        const pdfBuffer = await getTicketPDF(checkin.order, checkin.position);
+        await downloadAndPrint(pdfBuffer);
+        logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime });
+      }
+    } catch (err) {
+      console.error('Polling error:', err.message);
+    }
+  }, intervalMs);
+  console.log(`Polling check-in ogni ${intervalMs / 1000}s`);
 }
 
-app.post('/webhook', async (req, res) => {
-  if (!verifySignature(req)) return res.sendStatus(401);
-
-  const body = req.body;
-  const order = body?.checkin?.order;
-  const positionid = body?.checkin?.positionid;
-
-  if (!order) return res.sendStatus(400);
-  if (!autoPrint) return res.sendStatus(200);
-
-  try {
-    const pdfBuffer = await getTicketPDF(order, positionid);
-    await downloadAndPrint(pdfBuffer);
-    logPrint({ order, positionid, timestamp: new Date().toISOString() });
-    res.sendStatus(200);
-  } catch (err) {
-    console.error(err);
-    res.sendStatus(500);
-  }
-});
-
-app.listen(process.env.WEBHOOK_PORT || 3000, () => {
-  console.log(`Webhook server listening on port ${process.env.WEBHOOK_PORT || 3000}`);
-});
+startPolling();
 
 module.exports = { setAutoPrint: (v) => { autoPrint = v; } };
