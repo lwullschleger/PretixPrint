@@ -1,5 +1,5 @@
 # Pretix Print Service — Technical Specification
-**Version 1.3 | April 2026**
+**Version 1.4 | April 2026**
 
 ---
 
@@ -7,14 +7,16 @@
 
 A Windows desktop application built with **Electron + Node.js** that:
 
-- Listens for check-in webhook events from **pretix**
+- Interroga periodicamente l'API **pretix** (polling) per rilevare nuovi check-in
 - Downloads the pre-generated ticket PDF from the **pretix API**
 - Automatically prints it to a locally connected **Brother QL** label printer
 - Maintains a **JSON log** of all printed tickets, surviving restarts
 - Provides a simple **GUI** with two tabs:
   - **Dashboard**: seleziona stampante, toggle auto-print, log stampe
-  - **Configurazione**: form per impostare API token, organizer, evento, secret e porta — salvati in `data/config.json` e ricaricati automaticamente ad ogni avvio
+  - **Configurazione**: form per impostare API token, organizer, evento e intervallo polling — salvati in `data/config.json` e ricaricati automaticamente ad ogni avvio
 - Mostra una **barra di stato** (in basso) con l'esito della connessione all'API Pretix, la validità dell'organizer e dell'evento configurati
+
+> **Non richiede porte aperte o indirizzi IP raggiungibili dall'esterno.** Il traffico è esclusivamente uscente verso `pretix.eu`.
 
 ---
 
@@ -28,28 +30,29 @@ A Windows desktop application built with **Electron + Node.js** that:
 │  │  Renderer    │    │     Main Process         │   │
 │  │  (HTML/CSS)  │◄──►│     (Node.js)            │   │
 │  │              │    │                          │   │
-│  │ - Dashboard  │    │ - Express webhook server │   │
+│  │ - Dashboard  │    │ - Polling loop (axios)   │   │
 │  │   (printer,  │    │ - Pretix API client      │   │
 │  │    toggle,   │    │ - PDF downloader         │   │
 │  │    log)      │    │ - Printer driver         │   │
 │  │ - Config tab │    │ - JSON file logger       │   │
 │  │ - Status bar │    │ - Config manager         │   │
 │  └──────────────┘    └──────────────────────────┘   │
-│                      └──────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
-         ▲                        │
-         │ webhook POST           │ PDF download
-         │                        ▼
-    ┌─────────┐           ┌──────────────┐
-    │  pretix  │           │  pretix API  │
-    │ (cloud)  │           │  (REST)      │
-    └─────────┘           └──────────────┘
-                                  │
-                                  ▼
-                         ┌──────────────┐
-                         │  Brother QL  │
-                         │  (USB/LAN)   │
-                         └──────────────┘
+                               │
+                    GET /checkins/ (polling)
+                    GET /orders/.../pdf/
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │  pretix API  │
+                        │  (REST)      │
+                        └──────────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │  Brother QL  │
+                        │  (USB/LAN)   │
+                        └──────────────┘
 ```
 
 ---
@@ -63,8 +66,8 @@ pretix-print-service/
 ├── electron.js               ← Electron main entry point
 ├── preload.js                ← Electron preload (IPC bridge)
 ├── server/
-│   ├── index.js              ← Express webhook server
-│   ├── pretixApi.js          ← Pretix REST API client + checkStatus()
+│   ├── index.js              ← Polling loop (check-in → stampa)
+│   ├── pretixApi.js          ← Pretix REST API client + checkStatus() + getRecentCheckins()
 │   ├── printer.js            ← Printer logic (pdf-to-printer)
 │   ├── db.js                 ← JSON file logger
 │   └── config.js             ← Config manager (read/write data/config.json)
@@ -85,12 +88,12 @@ pretix-print-service/
 |---|---|
 | `electron` | Desktop app wrapper |
 | `electron-builder` | Build `.exe` installer |
-| `express` | Webhook HTTP server |
-| `axios` | HTTP client for pretix API |
+| `axios` | HTTP client for pretix API (polling + PDF download) |
 | `pdf-to-printer` | Windows printer driver |
 | `pdfkit` | PDF generation (used for test print) |
 
-> **Note:** `better-sqlite3` rimosso (richiedeva compilazione C++); log e config usano file JSON.
+> **`express` rimosso**: non è più necessario un server HTTP locale. Il flusso è interamente uscente.
+> `better-sqlite3` rimosso (richiedeva compilazione C++); log e config usano file JSON.
 > `dotenv` rimosso: la configurazione è gestita interamente dalla scheda **Configurazione** nell'app
 > e persiste in `data/config.json`. I file `.env` e `.env.example` non esistono più nel progetto.
 
@@ -129,82 +132,57 @@ child.on('close', (code) => process.exit(code || 0));
 
 ---
 
-## 6. Webhook Endpoint
+## 6. Polling Loop (`server/index.js`)
 
-pretix sends a `POST` to your app when a check-in occurs.
+L'app interroga periodicamente l'endpoint `/checkins/` di Pretix per rilevare nuovi check-in, senza necessità di esporre porte.
 
-**Endpoint:** `POST http://localhost:3000/webhook`
+**Endpoint Pretix:**
+```
+GET /api/v1/organizers/{org}/events/{event}/checkins/
+  ?datetime_since={iso8601}
+  &ordering=datetime
+  &type=entry
+```
 
-**pretix event type:** `pretix.event.checkin`
+**Risposta:** `{ results: [{ id, datetime, type, order, position, list }, ...] }`
+- `order` = codice ordine (stringa)
+- `position` = position ID (intero)
 
-**Flow:**
-1. Receive POST body from pretix
-2. Verify HMAC-SHA256 signature (`X-Pretix-Signature` header)
-3. Extract `order_code` and `position_id` from payload
-4. Call pretix API to download ticket PDF
-5. Send PDF to selected printer
-6. Log to JSON file
+**Flusso:**
+1. All'avvio: `lastPollTime = now`
+2. Ogni N secondi: `GET /checkins/?datetime_since={lastPollTime}`
+3. Se la chiamata ha successo: aggiorna `lastPollTime = now`
+4. Per ogni check-in ricevuto (se `autoPrint` attivo):
+   - `GET /orders/{order}/positions/{position}/pdf/` → PDF buffer
+   - Stampa il PDF → log su JSON
+5. In caso di errore di rete: `lastPollTime` NON avanza → riprova al prossimo tick
 
-**server/index.js:**
 ```javascript
-const express = require('express');
-const crypto = require('crypto');
-const { downloadAndPrint } = require('./printer');
-const { logPrint } = require('./db');
-const { getTicketPDF } = require('./pretixApi');
-
-const app = express();
-
-app.use(express.json({
-  verify: (req, res, buf) => { req.rawBody = buf; }
-}));
-
 let autoPrint = true;
+let lastPollTime = new Date().toISOString();
+let pollTimer = null;
 
-function verifySignature(req) {
-  const secret = process.env.PRETIX_WEBHOOK_SECRET;
-  if (!secret) return true; // non configurato, skip
-  const signature = req.headers['x-pretix-signature'];
-  if (!signature) return false;
-  const expected = crypto
-    .createHmac('sha256', secret)
-    .update(req.rawBody)
-    .digest('hex');
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(expected, 'hex')
-    );
-  } catch {
-    return false;
-  }
+function startPolling() {
+  const intervalMs = (parseInt(getConfig().POLL_INTERVAL) || 5) * 1000;
+  pollTimer = setInterval(async () => {
+    const since = lastPollTime;
+    const now = new Date().toISOString();
+    try {
+      const checkins = await getRecentCheckins(since);
+      lastPollTime = now;
+      for (const checkin of checkins) {
+        if (!autoPrint) continue;
+        const pdfBuffer = await getTicketPDF(checkin.order, checkin.position);
+        await downloadAndPrint(pdfBuffer);
+        logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime });
+      }
+    } catch (err) {
+      console.error('Polling error:', err.message);
+    }
+  }, intervalMs);
 }
 
-app.post('/webhook', async (req, res) => {
-  if (!verifySignature(req)) return res.sendStatus(401);
-
-  const body = req.body;
-  const order = body?.checkin?.order;
-  const positionid = body?.checkin?.positionid;
-
-  if (!order) return res.sendStatus(400);
-  if (!autoPrint) return res.sendStatus(200);
-
-  try {
-    const pdfBuffer = await getTicketPDF(order, positionid);
-    await downloadAndPrint(pdfBuffer);
-    logPrint({ order, positionid, timestamp: new Date().toISOString() });
-    res.sendStatus(200);
-  } catch (err) {
-    console.error(err);
-    res.sendStatus(500);
-  }
-});
-
-app.listen(process.env.WEBHOOK_PORT || 3000, () => {
-  console.log(`Webhook server listening on port ${process.env.WEBHOOK_PORT || 3000}`);
-});
-
+startPolling();
 module.exports = { setAutoPrint: (v) => { autoPrint = v; } };
 ```
 
@@ -216,27 +194,6 @@ The print log is stored as a JSON array in `data/prints.json`.
 Each entry has: `id`, `order_code`, `position_id`, `timestamp`.
 
 ```javascript
-const path = require('path');
-const fs = require('fs');
-
-const dataDir = path.join(__dirname, '../data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
-
-const dbPath = path.join(dataDir, 'prints.json');
-
-function readAll() {
-  if (!fs.existsSync(dbPath)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function writeAll(records) {
-  fs.writeFileSync(dbPath, JSON.stringify(records, null, 2));
-}
-
 function logPrint({ order, positionid, timestamp }) {
   const records = readAll();
   const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
@@ -248,52 +205,37 @@ function getRecentPrints(limit = 50) {
   const records = readAll();
   return records.slice(-limit).reverse();
 }
-
-module.exports = { logPrint, getRecentPrints };
 ```
 
 ---
 
-## 8. Pretix API Client
+## 8. Pretix API Client (`server/pretixApi.js`)
 
-**server/pretixApi.js:**
 ```javascript
-const axios = require('axios');
-require('dotenv').config();
-
 const BASE = 'https://pretix.eu/api/v1';
-const ORG = process.env.PRETIX_ORGANIZER;
-const EVENT = process.env.PRETIX_EVENT;
-const TOKEN = process.env.PRETIX_API_TOKEN;
 
-async function getTicketPDF(orderCode, positionId) {
-  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/orders/${orderCode}/positions/${positionId}/pdf/`;
+// Scarica il PDF di un biglietto
+async function getTicketPDF(orderCode, positionId) { ... }
+
+// Verifica connettività API, organizer ed evento
+async function checkStatus() { ... }
+
+// Restituisce i check-in avvenuti dopo `since` (ISO 8601)
+async function getRecentCheckins(since) {
+  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/checkins/`;
   const response = await axios.get(url, {
     headers: { Authorization: `Token ${TOKEN}` },
-    responseType: 'arraybuffer'
+    params: { datetime_since: since, ordering: 'datetime', type: 'entry' }
   });
-  return response.data;
+  return response.data.results;
 }
-
-module.exports = { getTicketPDF };
 ```
 
 ---
 
-## 9. Printer Module
+## 9. Printer Module (`server/printer.js`)
 
-**server/printer.js:**
 ```javascript
-const { print } = require('pdf-to-printer');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-
-let selectedPrinter = null;
-
-function setSelectedPrinter(name) { selectedPrinter = name; }
-function getSelectedPrinter() { return selectedPrinter; }
-
 async function downloadAndPrint(pdfBuffer) {
   const tmpPath = path.join(os.tmpdir(), `ticket_${Date.now()}.pdf`);
   fs.writeFileSync(tmpPath, Buffer.from(pdfBuffer));
@@ -301,58 +243,6 @@ async function downloadAndPrint(pdfBuffer) {
   await print(tmpPath, options);
   fs.unlinkSync(tmpPath);
 }
-
-async function testPrint() {
-  // Lazy requires to avoid circular dependencies
-  const PDFDocument = require('pdfkit');
-  const { getConfig } = require('./config');
-  const { checkStatus } = require('./pretixApi');
-
-  const cfg = getConfig();
-  let status = { api: false, organizer: false, event: false };
-  try { status = await checkStatus(); } catch {}
-
-  return new Promise((resolve, reject) => {
-    const W = 255; // ~90mm
-    const doc = new PDFDocument({ size: [W, 175], margin: 14 });
-    const chunks = [];
-    doc.on('data', c => chunks.push(c));
-    doc.on('end', async () => {
-      try { await downloadAndPrint(Buffer.concat(chunks)); resolve(); }
-      catch (err) { reject(err); }
-    });
-
-    const separator = () => {
-      doc.moveDown(0.3);
-      doc.moveTo(14, doc.y).lineTo(W - 14, doc.y).lineWidth(0.5).stroke();
-      doc.moveDown(0.3);
-    };
-    const statusTag = ok => ok ? '[  OK  ]' : '[  --  ]';
-
-    doc.fontSize(12).font('Helvetica-Bold').text('PRETIX PRINT SERVICE', { align: 'center' });
-    doc.fontSize(7).font('Helvetica').text('Pagina di test', { align: 'center' });
-    separator();
-
-    doc.fontSize(7).font('Helvetica-Bold').text('CONFIGURAZIONE');
-    doc.fontSize(7).font('Helvetica');
-    doc.text(`Organizer : ${cfg.PRETIX_ORGANIZER || '—'}`);
-    doc.text(`Evento    : ${cfg.PRETIX_EVENT    || '—'}`);
-    doc.text(`Porta     : ${cfg.WEBHOOK_PORT    || '3000'}`);
-    separator();
-
-    doc.fontSize(7).font('Helvetica-Bold').text('STATO CONNESSIONE');
-    doc.fontSize(7).font('Helvetica');
-    doc.text(`${statusTag(status.api)}       API Pretix`);
-    doc.text(`${statusTag(status.organizer)} Organizer`);
-    doc.text(`${statusTag(status.event)}     Evento`);
-    separator();
-
-    doc.fontSize(6).font('Helvetica').text(new Date().toLocaleString('it-IT'), { align: 'center' });
-    doc.end();
-  });
-}
-
-module.exports = { downloadAndPrint, setSelectedPrinter, getSelectedPrinter, testPrint };
 ```
 
 ---
@@ -361,31 +251,6 @@ module.exports = { downloadAndPrint, setSelectedPrinter, getSelectedPrinter, tes
 
 **electron.js:**
 ```javascript
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
-const path = require('path');
-const { getPrinters } = require('pdf-to-printer');
-const { setSelectedPrinter, getSelectedPrinter, testPrint } = require('./server/printer');
-const { getRecentPrints } = require('./server/db');
-const { setAutoPrint } = require('./server/index');
-const { getConfig, saveConfig } = require('./server/config');
-const { checkStatus } = require('./server/pretixApi');
-
-Menu.setApplicationMenu(null);
-
-let mainWindow;
-
-app.whenReady().then(() => {
-  mainWindow = new BrowserWindow({
-    width: 900,
-    height: 620,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true
-    }
-  });
-  mainWindow.loadFile('renderer/index.html');
-});
-
 ipcMain.handle('get-printers',         async () => await getPrinters());
 ipcMain.handle('set-printer',          (_, name) => setSelectedPrinter(name));
 ipcMain.handle('get-selected-printer', () => getSelectedPrinter());
@@ -395,23 +260,6 @@ ipcMain.handle('test-print',           async () => await testPrint());
 ipcMain.handle('get-config',           () => getConfig());
 ipcMain.handle('save-config',          (_, cfg) => saveConfig(cfg));
 ipcMain.handle('check-status',         async () => await checkStatus());
-```
-
-**preload.js:**
-```javascript
-const { contextBridge, ipcRenderer } = require('electron');
-
-contextBridge.exposeInMainWorld('api', {
-  getPrinters:        () => ipcRenderer.invoke('get-printers'),
-  setPrinter:         (name) => ipcRenderer.invoke('set-printer', name),
-  getSelectedPrinter: () => ipcRenderer.invoke('get-selected-printer'),
-  setAutoPrint:       (v) => ipcRenderer.invoke('set-auto-print', v),
-  getLog:             () => ipcRenderer.invoke('get-log'),
-  testPrint:          () => ipcRenderer.invoke('test-print'),
-  getConfig:          () => ipcRenderer.invoke('get-config'),
-  saveConfig:         (cfg) => ipcRenderer.invoke('save-config', cfg),
-  checkStatus:        () => ipcRenderer.invoke('check-status')
-});
 ```
 
 ---
@@ -428,13 +276,12 @@ See `renderer/index.html` and `renderer/renderer.js` for implementation.
 La configurazione avviene interamente dalla scheda **Configurazione** nell'interfaccia grafica.
 I parametri vengono salvati in `data/config.json` e ricaricati automaticamente ad ogni avvio.
 
-| Parametro | Dove trovarlo |
+| Parametro | Descrizione |
 |---|---|
-| API Token | pretix admin → Impostazioni → Team → API token (permesso: Leggi ordini) |
+| API Token | pretix admin → Impostazioni → Team → API token (permesso: **Leggi tutti gli ordini**) |
 | Organizer Slug | Nell'URL: `pretix.eu/control/event/`**organizer**`/evento/` |
 | Event Slug | Nell'URL: `pretix.eu/control/event/organizer/`**evento**`/` |
-| Webhook Secret | pretix admin → Impostazioni → Webhook → chiave di firma |
-| Porta Webhook | Default: 3000 (cambia solo se la porta è già occupata) |
+| Intervallo polling | Secondi tra una chiamata e l'altra all'API (default: 5). Modificabile dalla UI; richiede riavvio. |
 
 > Non esistono più file `.env` nel progetto.
 
@@ -442,17 +289,12 @@ I parametri vengono salvati in `data/config.json` e ricaricati automaticamente a
 
 ## 13. Pretix Configuration
 
-1. In pretix admin → **Settings → Webhooks** → Add new
-2. URL: `http://<gate-laptop-ip>:3000/webhook`
-3. Event type: **Check-in created**
-4. Copy signing secret → set as `PRETIX_WEBHOOK_SECRET`
+Per il token API:
+1. pretix admin → **Impostazioni → Team → Token API**
+2. Crea token con permesso **Leggi tutti gli ordini**
+3. Inserisci il token nella scheda **Configurazione** dell'app
 
-For the API token:
-1. **Settings → Teams → API tokens**
-2. Create token with **Read orders** permission
-3. Set as `PRETIX_API_TOKEN`
-
-> **Note:** For testing from pretix cloud to your laptop, use [ngrok](https://ngrok.com) to expose localhost temporarily: `ngrok http 3000`
+> Non è necessario configurare webhook su pretix. L'app interroga Pretix in polling — nessuna porta da aprire, nessun IP da esporre.
 
 ---
 
@@ -476,10 +318,9 @@ npm run build
 
 | Item | Action Required |
 |---|---|
-| Pretix webhook payload format | Verify exact JSON structure with a real test check-in |
-| PDF API endpoint | Test `GET /orders/{code}/positions/{id}/pdf/` on your pretix instance |
-| Webhook signature format | Verify pretix sends `X-Pretix-Signature` as hex HMAC-SHA256 |
+| Checkins API endpoint | Verificare che l'endpoint `/checkins/` risponda correttamente con il token configurato |
+| PDF API endpoint | Test `GET /orders/{code}/positions/{id}/pdf/` sul tuo pretix instance |
 | Brother QL compatibility | Confirm `pdf-to-printer` works with your model on Windows |
-| Network exposure | Use ngrok for dev; fixed LAN IP for production at gate |
 | Reprint feature | Add reprint button in log table (future iteration) |
 | Auto-print state persistence | Save toggle state across restarts (currently resets to `true`) |
+| Polling con paginating | Se l'evento ha molti check-in simultanei, gestire la paginazione dei risultati |
