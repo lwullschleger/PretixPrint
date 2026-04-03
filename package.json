@@ -21,16 +21,18 @@
   "build": {
     "appId": "com.pretix.gateprint",
     "productName": "Pretix Print Service",
+    "directories": {
+      "output": "dist"
+    },
     "win": {
       "target": "nsis"
     },
     "files": [
       "electron.js",
       "preload.js",
+      "launch.js",
       "server/**/*",
-      "renderer/**/*",
-      "data/**/*",
-      ".env"
+      "renderer/**/*"
     ]
   }
 }
