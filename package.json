@@ -1,11 +1,12 @@
 {
   "name": "pretix-print-service",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Automatically print tickets when checking in with Pretix",
   "main": "electron.js",
   "scripts": {
     "start": "node launch.js",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win",
+    "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
     "axios": "^1.7.0",
@@ -16,7 +17,8 @@
   },
   "devDependencies": {
     "electron": "^30.0.0",
-    "electron-builder": "^24.13.0"
+    "electron-builder": "^24.13.0",
+    "sharp": "^0.34.5"
   },
   "build": {
     "appId": "com.pretix.gateprint",
@@ -25,7 +27,8 @@
       "output": "dist"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.png"
     },
     "files": [
       "electron.js",

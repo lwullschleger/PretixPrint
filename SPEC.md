@@ -325,6 +325,9 @@ Per il token API:
 # Install dependencies
 npm install
 
+# (Una tantum) Genera l'icona PNG da build/icon.svg
+npm run generate-icons
+
 # Run in development
 npm start
 
@@ -332,6 +335,16 @@ npm start
 npm run build
 # Output: /dist/pretix-print-service Setup.exe
 ```
+
+### Icona applicazione
+
+| File | Descrizione |
+|---|---|
+| `build/icon.svg` | Sorgente vettoriale (stampante + ticket + checkmark) |
+| `build/icon.png` | PNG 512×512 generato via `sharp` — usato da electron-builder |
+| `scripts/generate-icons.js` | Script di conversione SVG→PNG |
+
+electron-builder converte automaticamente il PNG in `.ico` durante la build Windows.
 
 ---
 

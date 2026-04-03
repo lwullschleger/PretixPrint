@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a3a6e"/>
+      <stop offset="100%" stop-color="#0a1628"/>
+    </linearGradient>
+    <linearGradient id="printerGrad" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#e8edf4"/>
+      <stop offset="100%" stop-color="#c8d2de"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="ticketShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="88" fill="url(#bg)"/>
+
+  <!-- ===== TICKET / LABEL ===== -->
+  <!-- Ticket shadow + body -->
+  <rect x="166" y="82" width="180" height="210" rx="10" fill="#ffffff" filter="url(#ticketShadow)"/>
+
+  <!-- Ticket header strip (blue) -->
+  <rect x="166" y="82" width="180" height="36" rx="10" fill="#2563eb"/>
+  <rect x="166" y="106" width="180" height="12" fill="#2563eb"/>
+  <!-- Header text lines (white) -->
+  <rect x="182" y="92" width="80" height="8" rx="3" fill="#ffffff" opacity="0.9"/>
+  <rect x="182" y="104" width="55" height="6" rx="2" fill="#93c5fd" opacity="0.8"/>
+
+  <!-- Ticket: attendee name -->
+  <rect x="182" y="134" width="130" height="11" rx="4" fill="#0f172a"/>
+  <!-- Ticket: sub-lines -->
+  <rect x="182" y="153" width="96" height="7" rx="3" fill="#64748b"/>
+  <rect x="182" y="167" width="72" height="7" rx="3" fill="#94a3b8"/>
+  <rect x="182" y="181" width="108" height="7" rx="3" fill="#94a3b8" opacity="0.7"/>
+
+  <!-- Ticket: QR code (bottom-right of ticket) -->
+  <rect x="272" y="134" width="58" height="58" rx="5" fill="#f8fafc"/>
+  <!-- QR: position detection squares -->
+  <!-- top-left -->
+  <rect x="277" y="139" width="18" height="18" rx="1.5" fill="#0f172a"/>
+  <rect x="280" y="142" width="12" height="12" rx="0.5" fill="#f8fafc"/>
+  <rect x="283" y="145" width="6" height="6" fill="#0f172a"/>
+  <!-- top-right -->
+  <rect x="299" y="139" width="18" height="18" rx="1.5" fill="#0f172a"/>
+  <rect x="302" y="142" width="12" height="12" rx="0.5" fill="#f8fafc"/>
+  <rect x="305" y="145" width="6" height="6" fill="#0f172a"/>
+  <!-- bottom-left -->
+  <rect x="277" y="161" width="18" height="18" rx="1.5" fill="#0f172a"/>
+  <rect x="280" y="164" width="12" height="12" rx="0.5" fill="#f8fafc"/>
+  <rect x="283" y="167" width="6" height="6" fill="#0f172a"/>
+  <!-- QR: random dots center -->
+  <rect x="299" y="161" width="4" height="4" fill="#0f172a"/>
+  <rect x="307" y="161" width="4" height="4" fill="#0f172a"/>
+  <rect x="303" y="166" width="4" height="4" fill="#0f172a"/>
+  <rect x="307" y="171" width="4" height="4" fill="#0f172a"/>
+  <rect x="299" y="175" width="4" height="4" fill="#0f172a"/>
+  <rect x="307" y="175" width="4" height="4" fill="#0f172a"/>
+
+  <!-- Ticket: barcode strip -->
+  <rect x="182" y="208" width="6"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="191" y="208" width="4"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="198" y="208" width="8"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="209" y="208" width="4"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="216" y="208" width="8"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="227" y="208" width="4"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="234" y="208" width="6"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="243" y="208" width="10" height="26" rx="1" fill="#1e293b"/>
+  <rect x="256" y="208" width="4"  height="26" rx="1" fill="#1e293b"/>
+  <rect x="263" y="208" width="6"  height="26" rx="1" fill="#1e293b"/>
+
+  <!-- ===== CHECK BADGE (overlaid on ticket top-right corner) ===== -->
+  <circle cx="348" cy="112" r="34" fill="#ffffff"/>
+  <circle cx="348" cy="112" r="28" fill="#16a34a"/>
+  <path d="M334 112 L344 122 L364 98" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- ===== PRINTER BODY ===== -->
+  <rect x="68" y="278" width="376" height="152" rx="22" fill="url(#printerGrad)" filter="url(#shadow)"/>
+
+  <!-- Printer: paper feed slot (where ticket goes in) -->
+  <rect x="150" y="270" width="212" height="22" rx="6" fill="#9baab8"/>
+  <rect x="165" y="276" width="182" height="8" rx="3" fill="#7a8fa0" opacity="0.6"/>
+
+  <!-- Printer: front bottom strip -->
+  <rect x="68" y="374" width="376" height="56" rx="22" fill="#bbc8d6"/>
+  <rect x="68" y="374" width="376" height="12" fill="#bbc8d6"/>
+
+  <!-- Printer: paper output tray (bottom) -->
+  <rect x="186" y="426" width="140" height="10" rx="3" fill="#cdd8e2" opacity="0.9"/>
+
+  <!-- Printer: left ventilation slits -->
+  <rect x="96"  y="300" width="44" height="5" rx="2" fill="#9baab8"/>
+  <rect x="96"  y="312" width="38" height="5" rx="2" fill="#9baab8"/>
+  <rect x="96"  y="324" width="44" height="5" rx="2" fill="#9baab8"/>
+  <rect x="96"  y="336" width="30" height="5" rx="2" fill="#9baab8"/>
+
+  <!-- Printer: LCD display -->
+  <rect x="156" y="298" width="148" height="56" rx="9" fill="#0f172a"/>
+  <rect x="163" y="306" width="104" height="8" rx="3" fill="#3b82f6" opacity="0.95"/>
+  <rect x="163" y="320" width="72"  height="6" rx="2" fill="#60a5fa" opacity="0.7"/>
+  <rect x="163" y="332" width="88"  height="6" rx="2" fill="#22d3ee" opacity="0.55"/>
+  <!-- Display: blink cursor -->
+  <rect x="163" y="344" width="6"   height="6" rx="1" fill="#60a5fa" opacity="0.8"/>
+
+  <!-- Printer: feed / cut button -->
+  <rect x="322" y="300" width="52" height="22" rx="11" fill="#2563eb"/>
+  <rect x="330" y="306" width="36" height="10" rx="5" fill="#60a5fa" opacity="0.65"/>
+
+  <!-- Printer: power button -->
+  <circle cx="400" cy="302" r="18" fill="#1e3a7a"/>
+  <circle cx="400" cy="302" r="12" fill="#2563eb"/>
+  <path d="M400 294 L400 302" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <path d="M394 296 A8 8 0 1 0 406 296" stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- Printer: status LED (green = active / printing) -->
+  <circle cx="400" cy="338" r="10" fill="#15803d"/>
+  <circle cx="400" cy="338" r="5"  fill="#4ade80" opacity="0.85"/>
+</svg>
