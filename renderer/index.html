@@ -67,20 +67,25 @@
 
             <div class="form-group">
               <label>API Token</label>
-              <input type="password" id="cfg-PRETIX_API_TOKEN" autocomplete="off" placeholder="Token_xxxxxxxx">
-              <small>pretix.eu → Organizzatore → Impostazioni → Team → seleziona team → Token API → Crea nuovo token &nbsp;(permesso richiesto: <b>Leggi tutti gli ordini</b>)</small>
+              <div class="token-row">
+                <input type="password" id="cfg-PRETIX_API_TOKEN" autocomplete="off" placeholder="Token_xxxxxxxx">
+                <button type="button" id="loadOrgBtn">Carica</button>
+              </div>
+              <small>pretix.eu → Organizzatore → Impostazioni → Team → Token API &nbsp;(permesso: <b>Leggi tutti gli ordini</b>)</small>
             </div>
 
             <div class="form-group">
-              <label>Organizer Slug</label>
-              <input type="text" id="cfg-PRETIX_ORGANIZER" autocomplete="off" placeholder="nome-organizzatore">
-              <small>Visibile nell'URL: pretix.eu/control/event/<b>organizer</b>/evento/</small>
+              <label>Organizzatore</label>
+              <select id="cfg-PRETIX_ORGANIZER" disabled>
+                <option value="">— inserisci il token e clicca Carica —</option>
+              </select>
             </div>
 
             <div class="form-group">
-              <label>Event Slug</label>
-              <input type="text" id="cfg-PRETIX_EVENT" autocomplete="off" placeholder="nome-evento-2026">
-              <small>Visibile nell'URL: pretix.eu/control/event/organizer/<b>evento</b>/</small>
+              <label>Evento</label>
+              <select id="cfg-PRETIX_EVENT" disabled>
+                <option value="">— seleziona prima l'organizzatore —</option>
+              </select>
             </div>
 
             <div class="form-group">

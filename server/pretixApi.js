@@ -85,4 +85,41 @@ async function getRecentCheckins(since) {
   }
 }
 
-module.exports = { getTicketPDF, checkStatus, getRecentCheckins, getApiLog };
+async function getOrganizers(token) {
+  const results = [];
+  let url = `${BASE}/organizers/`;
+  while (url) {
+    try {
+      const res = await axios.get(url, { headers: { Authorization: `Token ${token}` } });
+      logCall('GET', url, res.status, true);
+      results.push(...res.data.results);
+      url = res.data.next || null;
+    } catch (err) {
+      logCall('GET', url, err.response?.status ?? 0, false);
+      throw err;
+    }
+  }
+  return results.map(o => ({ slug: o.slug, name: o.name }));
+}
+
+async function getEvents(token, org) {
+  const results = [];
+  let url = `${BASE}/organizers/${org}/events/`;
+  while (url) {
+    try {
+      const res = await axios.get(url, { headers: { Authorization: `Token ${token}` } });
+      logCall('GET', url, res.status, true);
+      results.push(...res.data.results);
+      url = res.data.next || null;
+    } catch (err) {
+      logCall('GET', url, err.response?.status ?? 0, false);
+      throw err;
+    }
+  }
+  return results.map(e => {
+    const name = typeof e.name === 'object' ? (Object.values(e.name)[0] || e.slug) : e.name;
+    return { slug: e.slug, name };
+  });
+}
+
+module.exports = { getTicketPDF, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };

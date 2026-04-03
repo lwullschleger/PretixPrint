@@ -234,14 +234,29 @@ tr:hover td { background: #f9f9f9; }
   line-height: 1.4;
 }
 
-.printer-row {
+.printer-row, .token-row {
   display: flex;
   gap: 10px;
   align-items: center;
 }
 
-.printer-row select {
+.printer-row select, .token-row input {
   flex: 1;
+}
+
+.form-group select {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  width: 100%;
+}
+
+.form-group select:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
 }
 
 .form-actions {

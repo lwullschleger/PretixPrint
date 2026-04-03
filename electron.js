@@ -5,7 +5,7 @@ const { setSelectedPrinter, getSelectedPrinter, testPrint } = require('./server/
 const { getRecentPrints } = require('./server/db');
 const { setAutoPrint } = require('./server/index');
 const { getConfig, saveConfig } = require('./server/config');
-const { checkStatus, getApiLog } = require('./server/pretixApi');
+const { checkStatus, getApiLog, getOrganizers, getEvents } = require('./server/pretixApi');
 
 Menu.setApplicationMenu(null);
 
@@ -37,3 +37,5 @@ ipcMain.handle('get-config',        () => getConfig());
 ipcMain.handle('save-config',       (_, cfg) => saveConfig({ ...getConfig(), ...cfg }));
 ipcMain.handle('check-status',      async () => await checkStatus());
 ipcMain.handle('get-api-log',       () => getApiLog());
+ipcMain.handle('get-organizers',    (_, token) => getOrganizers(token));
+ipcMain.handle('get-events',        (_, token, org) => getEvents(token, org));

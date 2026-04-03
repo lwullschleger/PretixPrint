@@ -1,4 +1,4 @@
-const CONFIG_KEYS = ['PRETIX_API_TOKEN', 'PRETIX_ORGANIZER', 'PRETIX_EVENT', 'POLL_INTERVAL'];
+const CONFIG_KEYS = ['PRETIX_API_TOKEN', 'POLL_INTERVAL'];
 let configDirty = false;
 let _pollCountdownTimer = null;
 
@@ -93,6 +93,76 @@ async function init() {
   });
   startPollCountdown(parseInt(cfg.POLL_INTERVAL) || 5);
 
+  // ── Cascading dropdowns: organizer & event ────────────────────
+  const orgSelect = document.getElementById('cfg-PRETIX_ORGANIZER');
+  const eventSelect = document.getElementById('cfg-PRETIX_EVENT');
+  const loadBtn = document.getElementById('loadOrgBtn');
+
+  async function populateEvents(token, org, savedEvent) {
+    eventSelect.innerHTML = '<option value="">— seleziona —</option>';
+    eventSelect.disabled = true;
+    try {
+      const events = await window.api.getEvents(token, org);
+      events.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.slug;
+        opt.textContent = e.name;
+        eventSelect.appendChild(opt);
+      });
+      eventSelect.disabled = false;
+      if (savedEvent) eventSelect.value = savedEvent;
+    } catch {
+      eventSelect.innerHTML = '<option value="">Errore caricamento eventi</option>';
+    }
+  }
+
+  async function populateOrganizers(token, savedOrg, savedEvent) {
+    loadBtn.disabled = true;
+    loadBtn.textContent = '…';
+    orgSelect.innerHTML = '<option value="">— seleziona —</option>';
+    orgSelect.disabled = true;
+    eventSelect.innerHTML = '<option value="">— seleziona prima l\'organizzatore —</option>';
+    eventSelect.disabled = true;
+    try {
+      const orgs = await window.api.getOrganizers(token);
+      orgs.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.slug;
+        opt.textContent = o.name;
+        orgSelect.appendChild(opt);
+      });
+      orgSelect.disabled = false;
+      if (savedOrg) {
+        orgSelect.value = savedOrg;
+        if (orgSelect.value === savedOrg) await populateEvents(token, savedOrg, savedEvent);
+      }
+    } catch {
+      orgSelect.innerHTML = '<option value="">Errore — token non valido?</option>';
+    } finally {
+      loadBtn.disabled = false;
+      loadBtn.textContent = 'Carica';
+    }
+  }
+
+  loadBtn.addEventListener('click', async () => {
+    const token = document.getElementById('cfg-PRETIX_API_TOKEN').value.trim();
+    if (!token) return;
+    await populateOrganizers(token, null, null);
+    setConfigDirty(true);
+  });
+
+  orgSelect.addEventListener('change', async () => {
+    const token = document.getElementById('cfg-PRETIX_API_TOKEN').value.trim();
+    if (orgSelect.value) await populateEvents(token, orgSelect.value, null);
+    setConfigDirty(true);
+  });
+
+  eventSelect.addEventListener('change', () => setConfigDirty(true));
+
+  if (cfg.PRETIX_API_TOKEN) {
+    await populateOrganizers(cfg.PRETIX_API_TOKEN, cfg.PRETIX_ORGANIZER, cfg.PRETIX_EVENT);
+  }
+
   document.getElementById('configForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newCfg = {};
@@ -100,6 +170,8 @@ async function init() {
       const input = document.getElementById(`cfg-${key}`);
       if (input) newCfg[key] = input.value.trim();
     });
+    newCfg.PRETIX_ORGANIZER = orgSelect.value;
+    newCfg.PRETIX_EVENT = eventSelect.value;
     await window.api.setPrinter(select.value);
     window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);

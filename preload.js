@@ -10,5 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   getConfig:          () => ipcRenderer.invoke('get-config'),
   saveConfig:         (cfg) => ipcRenderer.invoke('save-config', cfg),
   checkStatus:        () => ipcRenderer.invoke('check-status'),
-  getApiLog:          () => ipcRenderer.invoke('get-api-log')
+  getApiLog:          () => ipcRenderer.invoke('get-api-log'),
+  getOrganizers:      (token) => ipcRenderer.invoke('get-organizers', token),
+  getEvents:          (token, org) => ipcRenderer.invoke('get-events', token, org)
 });

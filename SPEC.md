@@ -289,8 +289,8 @@ I parametri vengono salvati in `data/config.json` e ricaricati automaticamente a
 | Parametro | Descrizione |
 |---|---|
 | API Token | pretix admin → Impostazioni → Team → API token (permesso: **Leggi tutti gli ordini**) |
-| Organizer Slug | Nell'URL: `pretix.eu/control/event/`**organizer**`/evento/` |
-| Event Slug | Nell'URL: `pretix.eu/control/event/organizer/`**evento**`/` |
+| Organizzatore | Selezionato da dropdown popolato via `GET /api/v1/organizers/` dopo aver inserito il token |
+| Evento | Selezionato da dropdown a cascata via `GET /api/v1/organizers/{org}/events/` |
 | Intervallo polling | Secondi tra una chiamata e l'altra all'API (default: 5). Modificabile dalla UI; richiede riavvio. |
 | Stampante selezionata | Nome della stampante scelta nella Dashboard; salvata in `data/config.json` e ripristinata all'avvio. |
 
