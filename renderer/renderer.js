@@ -83,13 +83,8 @@ async function init() {
   badgeBgToggle.addEventListener('change', () => setConfigDirty(true));
 
   // ── Print log ─────────────────────────────────────────────────
-  const rows = await window.api.getLog();
-  const tbody = document.querySelector('#logTable tbody');
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.id}</td><td>${r.attendee_name || '—'}</td><td>${r.order_code}</td><td>${r.timestamp}</td>`;
-    tbody.appendChild(tr);
-  });
+  await refreshLog();
+  setInterval(refreshLog, 3000);
 
   // ── Config form ───────────────────────────────────────────────
   const cfg = await window.api.getConfig();
@@ -102,6 +97,7 @@ async function init() {
   });
   startPollCountdown(parseInt(cfg.POLL_INTERVAL) || 5);
   badgeBgToggle.checked = cfg.BADGE_USE_BACKGROUND === 'true';
+  toggle.checked = cfg.AUTO_PRINT !== 'false';
   updateAutoPrintWarning(toggle.checked);
 
   // ── Cascading dropdowns: organizer & event ────────────────────
@@ -184,6 +180,7 @@ async function init() {
     newCfg.PRETIX_ORGANIZER = orgSelect.value;
     newCfg.PRETIX_EVENT = eventSelect.value;
     newCfg.BADGE_USE_BACKGROUND = String(badgeBgToggle.checked);
+    newCfg.AUTO_PRINT = String(toggle.checked);
     await window.api.setPrinter(select.value);
     window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);
@@ -196,6 +193,22 @@ async function init() {
     checkStatus(); // refresh status bar after saving
   });
 
+  // ── Badge layout info ─────────────────────────────────────────
+  async function refreshBadgeLayoutName() {
+    const name = await window.api.getBadgeLayoutName();
+    document.getElementById('badgeLayoutName').textContent = name || '—';
+  }
+  await refreshBadgeLayoutName();
+  document.getElementById('updateBadgeLayoutBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('updateBadgeLayoutBtn');
+    btn.disabled = true;
+    btn.textContent = '…';
+    await window.api.refreshBadgeCache();
+    await refreshBadgeLayoutName();
+    btn.textContent = 'Update';
+    btn.disabled = false;
+  });
+
   // ── API log auto-refresh ──────────────────────────────────────
   document.getElementById('apiLogErrorFilter').addEventListener('change', refreshApiLog);
   setInterval(refreshApiLog, 2000);
@@ -204,6 +217,52 @@ async function init() {
   document.getElementById('statusRefreshBtn').addEventListener('click', checkStatus);
   checkStatus();
   setInterval(checkStatus, 30000); // auto-refresh every 30s
+}
+
+async function refreshLog() {
+  const rows = await window.api.getLog();
+  const tbody = document.querySelector('#logTable tbody');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const printedFlag = r.printed
+      ? '<span class="printed-flag printed-yes" title="Badge stampato">&#10003;</span>'
+      : '<span class="printed-flag printed-no" title="Non stampato">&ndash;</span>';
+    const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('it-IT', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+    tr.innerHTML = `<td>${r.id}</td><td>${ts}</td><td>${r.attendee_name || '—'}</td><td>${printedFlag}</td><td></td>`;
+    const btnCell = tr.querySelector('td:last-child');
+
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn';
+    btn.title = 'Ristampa badge';
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>`;
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await window.api.reprintBadge(r.id, r.position_id);
+        await refreshLog();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'icon-btn';
+    previewBtn.title = 'Anteprima badge';
+    previewBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+    previewBtn.addEventListener('click', async () => {
+      previewBtn.disabled = true;
+      try {
+        await window.api.previewBadge(r.id, r.position_id);
+      } finally {
+        previewBtn.disabled = false;
+      }
+    });
+
+    btnCell.appendChild(btn);
+    btnCell.appendChild(previewBtn);
+    tbody.appendChild(tr);
+  });
 }
 
 async function refreshApiLog() {

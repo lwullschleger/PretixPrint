@@ -139,7 +139,9 @@ async function renderBarcode(pdfDoc, page, el, values) {
 }
 
 // ── Main render entry point ───────────────────────────────────
-async function renderBadge(layoutElements, backgroundPdfBytes, values) {
+// backgroundPdfBytes: always pass when available (used for page dimensions)
+// showBackground: if false, page dimensions are taken from PDF but bg is covered with white
+async function renderBadge(layoutElements, backgroundPdfBytes, values, showBackground = true) {
   let pdfDoc;
   let page;
 
@@ -149,9 +151,13 @@ async function renderBadge(layoutElements, backgroundPdfBytes, values) {
     const [bgPage] = await pdfDoc.copyPages(bgDoc, [0]);
     pdfDoc.addPage(bgPage);
     page = pdfDoc.getPage(0);
+    if (!showBackground) {
+      const { width, height } = page.getSize();
+      page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(1, 1, 1) });
+    }
   } else {
     pdfDoc = await PDFDocument.create();
-    // Default badge size: 90 × 55 mm (landscape)
+    // Fallback size when no background is configured at all in Pretix
     page = pdfDoc.addPage([mm(90), mm(55)]);
   }
 

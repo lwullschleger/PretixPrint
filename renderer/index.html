@@ -28,10 +28,10 @@
       </div>
 
       <div class="log-section">
-        <h2>Log di stampa</h2>
+        <h2>Check-in effettuati</h2>
         <table id="logTable">
           <thead>
-            <tr><th>#</th><th>Nome</th><th>Ordine</th><th>Timestamp</th></tr>
+            <tr><th>#</th><th>Data/Ora</th><th>Nome</th><th>Stampato</th><th></th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -106,6 +106,14 @@
               <select id="cfg-PRETIX_EVENT" disabled>
                 <option value="">— seleziona prima l'organizzatore —</option>
               </select>
+            </div>
+
+            <div class="form-group">
+              <label>Layout badge</label>
+              <div class="badge-layout-row">
+                <span id="badgeLayoutName">—</span>
+                <button type="button" id="updateBadgeLayoutBtn">Update</button>
+              </div>
             </div>
 
           </div>

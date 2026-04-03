@@ -22,8 +22,15 @@ function writeAll(records) {
 function logPrint({ order, positionid, name, timestamp }) {
   const records = readAll();
   const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
-  records.push({ id, attendee_name: name || '—', order_code: order, position_id: positionid, timestamp });
+  records.push({ id, attendee_name: name || '—', order_code: order, position_id: positionid, timestamp, printed: false });
   writeAll(records);
+  return id;
+}
+
+function markPrinted(id) {
+  const records = readAll();
+  const rec = records.find(r => r.id === id);
+  if (rec) { rec.printed = true; writeAll(records); }
 }
 
 function getRecentPrints(limit = 50) {
@@ -31,4 +38,4 @@ function getRecentPrints(limit = 50) {
   return records.slice(-limit).reverse();
 }
 
-module.exports = { logPrint, getRecentPrints };
+module.exports = { logPrint, markPrinted, getRecentPrints };

@@ -166,6 +166,38 @@ th {
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f9f9f9; }
 
+/* ── Print log ───────────────────────────────────────── */
+
+.printed-flag {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.printed-yes { color: #2e7d32; }
+.printed-no  { color: #bbb; }
+
+.icon-btn {
+  padding: 4px 6px;
+  background: transparent;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  line-height: 0;
+}
+
+.icon-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+  border-color: #bbb;
+}
+
+#logTable td:last-child {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+
 /* ── API Log tab ─────────────────────────────────────── */
 
 .apilog-header {
@@ -276,6 +308,19 @@ tr:hover td { background: #f9f9f9; }
   color: #888;
   font-size: 0.78rem;
   line-height: 1.4;
+}
+
+.badge-layout-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge-layout-row span {
+  flex: 1;
+  font-size: 0.88rem;
+  color: #444;
+  font-weight: normal;
 }
 
 .printer-row, .token-row {

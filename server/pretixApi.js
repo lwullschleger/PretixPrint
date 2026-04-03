@@ -51,10 +51,14 @@ async function getPositionDetails(positionId) {
   }
 }
 
-// ── Badge layout ──────────────────────────────────────────────
+// ── Badge layout + background cache ──────────────────────────
 let _badgeLayoutCache = null;
+let _backgroundBytesCache = null;
 
-function clearBadgeLayoutCache() { _badgeLayoutCache = null; }
+function clearBadgeLayoutCache() {
+  _badgeLayoutCache = null;
+  _backgroundBytesCache = null;
+}
 
 async function getDefaultBadgeLayout() {
   if (_badgeLayoutCache) return _badgeLayoutCache;
@@ -84,6 +88,34 @@ async function downloadBackground(backgroundUrl) {
     console.error('Badge: impossibile scaricare il background:', err.message);
     return null;
   }
+}
+
+async function getCachedBackground(backgroundUrl) {
+  if (_backgroundBytesCache) return _backgroundBytesCache;
+  _backgroundBytesCache = await downloadBackground(backgroundUrl);
+  return _backgroundBytesCache;
+}
+
+async function warmBadgeCache() {
+  try {
+    const layout = await getDefaultBadgeLayout();
+    if (layout && layout.background && typeof layout.background === 'string') {
+      await getCachedBackground(layout.background);
+    }
+    console.log('Badge cache pronta.');
+  } catch (err) {
+    console.error('Warm badge cache fallito:', err.message);
+  }
+}
+
+function getBadgeLayoutName() {
+  return _badgeLayoutCache?.name || null;
+}
+
+async function refreshBadgeCache() {
+  clearBadgeLayoutCache();
+  await warmBadgeCache();
+  return getBadgeLayoutName();
 }
 
 async function checkStatus() {
@@ -175,4 +207,4 @@ async function getEvents(token, org) {
   });
 }
 
-module.exports = { getPositionDetails, getDefaultBadgeLayout, downloadBackground, clearBadgeLayoutCache, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };
+module.exports = { getPositionDetails, getDefaultBadgeLayout, getCachedBackground, warmBadgeCache, getBadgeLayoutName, refreshBadgeCache, clearBadgeLayoutCache, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };

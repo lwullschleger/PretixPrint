@@ -1,17 +1,22 @@
-const { app, BrowserWindow, ipcMain, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('path');
+const os = require('os');
+const fs = require('fs');
 const { getPrinters } = require('pdf-to-printer');
 const { setSelectedPrinter, getSelectedPrinter, testPrint } = require('./server/printer');
 const { getRecentPrints } = require('./server/db');
-const { setAutoPrint } = require('./server/index');
+const { setAutoPrint, reprintPosition, previewPosition } = require('./server/index');
 const { getConfig, saveConfig } = require('./server/config');
-const { checkStatus, getApiLog, getOrganizers, getEvents, clearBadgeLayoutCache } = require('./server/pretixApi');
+const { checkStatus, getApiLog, getOrganizers, getEvents, clearBadgeLayoutCache, warmBadgeCache, getBadgeLayoutName, refreshBadgeCache } = require('./server/pretixApi');
 
 Menu.setApplicationMenu(null);
 
 // Restore selected printer from persisted config
 const _initCfg = getConfig();
 if (_initCfg.SELECTED_PRINTER) setSelectedPrinter(_initCfg.SELECTED_PRINTER);
+
+// Pre-load badge layout + background PDF into memory cache
+warmBadgeCache();
 
 let mainWindow;
 
@@ -39,3 +44,12 @@ ipcMain.handle('check-status',      async () => await checkStatus());
 ipcMain.handle('get-api-log',       () => getApiLog());
 ipcMain.handle('get-organizers',    (_, token) => getOrganizers(token));
 ipcMain.handle('get-events',        (_, token, org) => getEvents(token, org));
+ipcMain.handle('reprint-badge',         (_, logId, positionId) => reprintPosition(logId, positionId));
+ipcMain.handle('get-badge-layout-name', () => getBadgeLayoutName());
+ipcMain.handle('refresh-badge-cache',   () => refreshBadgeCache());
+ipcMain.handle('preview-badge',     async (_, logId, positionId) => {
+  const pdfBuffer = await previewPosition(positionId);
+  const tmpPath = path.join(os.tmpdir(), `badge_preview_${logId}.pdf`);
+  fs.writeFileSync(tmpPath, pdfBuffer);
+  await shell.openPath(tmpPath);
+});

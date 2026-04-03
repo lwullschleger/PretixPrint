@@ -12,5 +12,9 @@ contextBridge.exposeInMainWorld('api', {
   checkStatus:        () => ipcRenderer.invoke('check-status'),
   getApiLog:          () => ipcRenderer.invoke('get-api-log'),
   getOrganizers:      (token) => ipcRenderer.invoke('get-organizers', token),
-  getEvents:          (token, org) => ipcRenderer.invoke('get-events', token, org)
+  getEvents:          (token, org) => ipcRenderer.invoke('get-events', token, org),
+  reprintBadge:         (logId, positionId) => ipcRenderer.invoke('reprint-badge', logId, positionId),
+  previewBadge:         (logId, positionId) => ipcRenderer.invoke('preview-badge', logId, positionId),
+  getBadgeLayoutName:   () => ipcRenderer.invoke('get-badge-layout-name'),
+  refreshBadgeCache:    () => ipcRenderer.invoke('refresh-badge-cache')
 });
