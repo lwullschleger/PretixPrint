@@ -12,6 +12,7 @@
     <nav class="tabs">
       <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
       <button class="tab-btn" data-tab="config">Configurazione</button>
+      <button class="tab-btn" data-tab="apilog">Log API</button>
     </nav>
   </div>
 
@@ -19,19 +20,6 @@
 
     <!-- ── Dashboard ─────────────────────────────────── -->
     <div id="tab-dashboard" class="tab-pane active">
-
-      <div class="row">
-        <label>Stampante:</label>
-        <select id="printerSelect"></select>
-        <button id="testPrintBtn">Test Print</button>
-      </div>
-
-      <div class="row">
-        <label>
-          <input type="checkbox" id="autoPrintToggle" checked>
-          Stampa automatica al check-in
-        </label>
-      </div>
 
       <div class="log-section">
         <h2>Log di stampa</h2>
@@ -49,57 +37,91 @@
     <div id="tab-config" class="tab-pane">
 
       <h2>Configurazione Pretix</h2>
-      <p class="config-intro">I parametri vengono salvati in automatico nell'app e ricaricati ad ogni avvio — non è necessario modificare il file .env manualmente.</p>
 
       <form id="configForm">
 
-        <div class="form-group">
-          <label>API Token</label>
-          <input type="password" id="cfg-PRETIX_API_TOKEN" autocomplete="off" placeholder="Token_xxxxxxxx">
-          <small>pretix.eu → Organizzatore → Impostazioni → Team → seleziona team → Token API → Crea nuovo token &nbsp;(permesso richiesto: <b>Leggi tutti gli ordini</b>)</small>
-        </div>
+        <div class="config-columns">
 
-        <div class="form-group">
-          <label>Organizer Slug</label>
-          <input type="text" id="cfg-PRETIX_ORGANIZER" autocomplete="off" placeholder="nome-organizzatore">
-          <small>Visibile nell'URL: pretix.eu/control/event/<b>organizer</b>/evento/</small>
-        </div>
+          <!-- ── Colonna sinistra ── -->
+          <div class="config-col">
 
-        <div class="form-group">
-          <label>Event Slug</label>
-          <input type="text" id="cfg-PRETIX_EVENT" autocomplete="off" placeholder="nome-evento-2026">
-          <small>Visibile nell'URL: pretix.eu/control/event/organizer/<b>evento</b>/</small>
-        </div>
+            <div class="form-group">
+              <label>Stampante</label>
+              <div class="printer-row">
+                <select id="printerSelect"></select>
+                <button type="button" id="testPrintBtn">Test Print</button>
+              </div>
+            </div>
 
-        <div class="form-group">
-          <label>Intervallo polling (secondi)</label>
-          <input type="number" id="cfg-POLL_INTERVAL" placeholder="5" min="1" max="60">
-          <small>Ogni quanti secondi l'app interroga Pretix per nuovi check-in (default: 5). Una modifica richiede il riavvio dell'app.</small>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="autoPrintToggle" checked>
+                Stampa automatica al check-in
+              </label>
+            </div>
+
+          </div>
+
+          <!-- ── Colonna destra ── -->
+          <div class="config-col">
+
+            <div class="form-group">
+              <label>API Token</label>
+              <input type="password" id="cfg-PRETIX_API_TOKEN" autocomplete="off" placeholder="Token_xxxxxxxx">
+              <small>pretix.eu → Organizzatore → Impostazioni → Team → seleziona team → Token API → Crea nuovo token &nbsp;(permesso richiesto: <b>Leggi tutti gli ordini</b>)</small>
+            </div>
+
+            <div class="form-group">
+              <label>Organizer Slug</label>
+              <input type="text" id="cfg-PRETIX_ORGANIZER" autocomplete="off" placeholder="nome-organizzatore">
+              <small>Visibile nell'URL: pretix.eu/control/event/<b>organizer</b>/evento/</small>
+            </div>
+
+            <div class="form-group">
+              <label>Event Slug</label>
+              <input type="text" id="cfg-PRETIX_EVENT" autocomplete="off" placeholder="nome-evento-2026">
+              <small>Visibile nell'URL: pretix.eu/control/event/organizer/<b>evento</b>/</small>
+            </div>
+
+            <div class="form-group">
+              <label>Intervallo polling (secondi)</label>
+              <input type="number" id="cfg-POLL_INTERVAL" placeholder="5" min="1" max="60">
+              <small>Ogni quanti secondi l'app interroga Pretix per nuovi check-in (default: 5). Una modifica richiede il riavvio dell'app.</small>
+            </div>
+
+          </div>
+
         </div>
 
         <div class="form-actions">
           <button type="submit" id="saveConfigBtn">Salva configurazione</button>
+          <span id="unsavedMsg"></span>
           <span id="saveStatus"></span>
         </div>
 
       </form>
     </div>
 
+    <!-- ── Log API ───────────────────────────────────── -->
+    <div id="tab-apilog" class="tab-pane">
+      <h2>Log chiamate API</h2>
+      <table id="apiLogTable">
+        <thead>
+          <tr><th>Ora</th><th>Metodo</th><th>Endpoint</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
   </div>
 
   <!-- ── Status bar ──────────────────────────────────── -->
   <div class="status-bar">
-    <span class="status-item" id="status-api">
-      <span class="dot"></span>
-      <span class="status-label">API Pretix</span>
-    </span>
-    <span class="status-item" id="status-organizer">
-      <span class="dot"></span>
-      <span class="status-label">Organizer</span>
-    </span>
-    <span class="status-item" id="status-event">
-      <span class="dot"></span>
-      <span class="status-label">Evento</span>
+    <span class="status-item" id="status-api"><span class="dot"></span><span class="status-label">API Pretix</span></span>
+    <span class="status-item" id="status-organizer"><span class="dot"></span><span class="status-label">Organizer</span></span>
+    <span class="status-item" id="status-event"><span class="dot"></span><span class="status-label">Evento</span></span>
+    <span class="status-item" id="status-poll">
+      <span class="status-label">Polling: --s</span>
     </span>
     <span class="status-refresh" id="statusRefreshBtn" title="Aggiorna stato">↻</span>
   </div>

@@ -1,10 +1,40 @@
 const CONFIG_KEYS = ['PRETIX_API_TOKEN', 'PRETIX_ORGANIZER', 'PRETIX_EVENT', 'POLL_INTERVAL'];
+let configDirty = false;
+let _pollCountdownTimer = null;
+
+function startPollCountdown(intervalSec) {
+  if (_pollCountdownTimer) clearInterval(_pollCountdownTimer);
+  const label = document.querySelector('#status-poll .status-label');
+  let remaining = intervalSec;
+  const tick = () => { label.textContent = `Polling: ${remaining}s`; remaining--; if (remaining < 0) remaining = intervalSec; };
+  tick();
+  _pollCountdownTimer = setInterval(tick, 1000);
+}
+
+function setConfigDirty(dirty) {
+  configDirty = dirty;
+  const saveBtn = document.getElementById('saveConfigBtn');
+  const unsavedMsg = document.getElementById('unsavedMsg');
+  if (dirty) {
+    saveBtn.classList.add('unsaved');
+    unsavedMsg.textContent = 'Modifiche non salvate';
+  } else {
+    saveBtn.classList.remove('unsaved');
+    unsavedMsg.textContent = '';
+  }
+}
 
 async function init() {
 
   // ── Tab navigation ────────────────────────────────────────────
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+      if (currentTab === 'config' && configDirty && btn.dataset.tab !== 'config') {
+        const ok = confirm('Hai modifiche non salvate nella configurazione.\nSe esci ora andranno perse. Continuare?');
+        if (!ok) return;
+        setConfigDirty(false);
+      }
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
@@ -23,7 +53,7 @@ async function init() {
   });
   const selected = await window.api.getSelectedPrinter();
   if (selected) select.value = selected;
-  select.addEventListener('change', () => window.api.setPrinter(select.value));
+  select.addEventListener('change', () => setConfigDirty(true));
 
   // ── Test print ────────────────────────────────────────────────
   const testBtn = document.getElementById('testPrintBtn');
@@ -41,7 +71,7 @@ async function init() {
 
   // ── Auto-print toggle ─────────────────────────────────────────
   const toggle = document.getElementById('autoPrintToggle');
-  toggle.addEventListener('change', () => window.api.setAutoPrint(toggle.checked));
+  toggle.addEventListener('change', () => setConfigDirty(true));
 
   // ── Print log ─────────────────────────────────────────────────
   const rows = await window.api.getLog();
@@ -56,8 +86,12 @@ async function init() {
   const cfg = await window.api.getConfig();
   CONFIG_KEYS.forEach(key => {
     const input = document.getElementById(`cfg-${key}`);
-    if (input) input.value = cfg[key] || '';
+    if (input) {
+      input.value = cfg[key] || '';
+      input.addEventListener('input', () => setConfigDirty(true));
+    }
   });
+  startPollCountdown(parseInt(cfg.POLL_INTERVAL) || 5);
 
   document.getElementById('configForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -66,17 +100,36 @@ async function init() {
       const input = document.getElementById(`cfg-${key}`);
       if (input) newCfg[key] = input.value.trim();
     });
+    await window.api.setPrinter(select.value);
+    window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);
+    setConfigDirty(false);
+    startPollCountdown(parseInt(newCfg.POLL_INTERVAL) || 5);
     const saveStatus = document.getElementById('saveStatus');
     saveStatus.textContent = 'Salvato!';
     setTimeout(() => { saveStatus.textContent = ''; }, 2500);
     checkStatus(); // refresh status bar after saving
   });
 
+  // ── API log auto-refresh ──────────────────────────────────────
+  setInterval(refreshApiLog, 2000);
+
   // ── Status bar ────────────────────────────────────────────────
   document.getElementById('statusRefreshBtn').addEventListener('click', checkStatus);
   checkStatus();
   setInterval(checkStatus, 30000); // auto-refresh every 30s
+}
+
+async function refreshApiLog() {
+  const rows = await window.api.getApiLog();
+  const tbody = document.querySelector('#apiLogTable tbody');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const statusClass = r.ok ? 'status-ok' : 'status-err';
+    tr.innerHTML = `<td>${r.timestamp}</td><td>${r.method}</td><td class="endpoint">${r.endpoint}</td><td class="${statusClass}">${r.status || '—'}</td>`;
+    tbody.appendChild(tr);
+  });
 }
 
 async function checkStatus() {
@@ -110,7 +163,7 @@ async function checkStatus() {
 function setStatus(id, ok, label) {
   const el = document.getElementById(id);
   el.querySelector('.dot').className = 'dot ' + (ok ? 'ok' : 'error');
-  el.querySelector('.status-label').textContent = label;
+  el.title = label; // dettaglio errore al hover
 }
 
 init();

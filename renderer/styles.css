@@ -149,6 +149,23 @@ th {
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f9f9f9; }
 
+/* ── API Log tab ─────────────────────────────────────── */
+
+#tab-apilog h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+#apiLogTable .endpoint {
+  font-family: monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+#apiLogTable .status-ok { color: #2e7d32; font-weight: 600; }
+#apiLogTable .status-err { color: #c62828; font-weight: 600; }
+
 /* ── Config form ─────────────────────────────────────── */
 
 #tab-config h2 {
@@ -168,7 +185,19 @@ tr:hover td { background: #f9f9f9; }
 }
 
 #configForm {
-  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.config-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.config-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -205,6 +234,16 @@ tr:hover td { background: #f9f9f9; }
   line-height: 1.4;
 }
 
+.printer-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.printer-row select {
+  flex: 1;
+}
+
 .form-actions {
   display: flex;
   align-items: center;
@@ -220,6 +259,20 @@ tr:hover td { background: #f9f9f9; }
   font-size: 0.85rem;
   color: #2e7d32;
   font-weight: 600;
+}
+
+#unsavedMsg {
+  font-size: 0.85rem;
+  color: #e65100;
+  font-weight: 600;
+}
+
+#saveConfigBtn.unsaved {
+  background: #e65100;
+}
+
+#saveConfigBtn.unsaved:hover {
+  background: #bf360c;
 }
 
 /* ── Status bar ──────────────────────────────────────── */

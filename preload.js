@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('api', {
   testPrint:          () => ipcRenderer.invoke('test-print'),
   getConfig:          () => ipcRenderer.invoke('get-config'),
   saveConfig:         (cfg) => ipcRenderer.invoke('save-config', cfg),
-  checkStatus:        () => ipcRenderer.invoke('check-status')
+  checkStatus:        () => ipcRenderer.invoke('check-status'),
+  getApiLog:          () => ipcRenderer.invoke('get-api-log')
 });

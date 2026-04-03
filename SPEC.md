@@ -11,9 +11,10 @@ A Windows desktop application built with **Electron + Node.js** that:
 - Downloads the pre-generated ticket PDF from the **pretix API**
 - Automatically prints it to a locally connected **Brother QL** label printer
 - Maintains a **JSON log** of all printed tickets, surviving restarts
-- Provides a simple **GUI** with two tabs:
-  - **Dashboard**: seleziona stampante, toggle auto-print, log stampe
-  - **Configurazione**: form per impostare API token, organizer, evento e intervallo polling — salvati in `data/config.json` e ricaricati automaticamente ad ogni avvio
+- Provides a simple **GUI** with three tabs:
+  - **Dashboard**: log stampe
+  - **Configurazione**: selettore stampante + Test Print, toggle stampa automatica, form per impostare API token, organizer, evento e intervallo polling — salvati in `data/config.json` e ricaricati automaticamente ad ogni avvio
+  - **Log API**: tabella in-memory delle chiamate HTTP effettuate verso Pretix (ora, metodo, endpoint, status code), aggiornata ogni 2 secondi; max 200 voci, resettata al riavvio
 - Mostra una **barra di stato** (in basso) con l'esito della connessione all'API Pretix, la validità dell'organizer e dell'evento configurati
 
 > **Non richiede porte aperte o indirizzi IP raggiungibili dall'esterno.** Il traffico è esclusivamente uscente verso `pretix.eu`.
@@ -269,6 +270,15 @@ ipcMain.handle('check-status',         async () => await checkStatus());
 The UI includes a printer selector, auto-print toggle, test print button, and print log table.
 See `renderer/index.html` and `renderer/renderer.js` for implementation.
 
+### Unsaved Changes Tracking (Config tab)
+
+La scheda **Configurazione** traccia le modifiche non salvate con un flag `configDirty`:
+
+- Ogni campo input del form registra un listener `input`; appena l'utente modifica un valore, `configDirty` diventa `true`.
+- Il bottone **Salva configurazione** cambia colore (arancione) e compare il testo *"Modifiche non salvate"* accanto al bottone.
+- Se l'utente tenta di passare a un'altra tab con `configDirty = true`, appare un `confirm()` di avviso; se l'utente annulla, la navigazione non avviene.
+- Al salvataggio del form `configDirty` viene resettato a `false` e l'UI torna allo stato normale.
+
 ---
 
 ## 12. Configurazione
@@ -282,6 +292,7 @@ I parametri vengono salvati in `data/config.json` e ricaricati automaticamente a
 | Organizer Slug | Nell'URL: `pretix.eu/control/event/`**organizer**`/evento/` |
 | Event Slug | Nell'URL: `pretix.eu/control/event/organizer/`**evento**`/` |
 | Intervallo polling | Secondi tra una chiamata e l'altra all'API (default: 5). Modificabile dalla UI; richiede riavvio. |
+| Stampante selezionata | Nome della stampante scelta nella Dashboard; salvata in `data/config.json` e ripristinata all'avvio. |
 
 > Non esistono più file `.env` nel progetto.
 
