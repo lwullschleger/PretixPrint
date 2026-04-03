@@ -1,6 +1,6 @@
 {
   "name": "pretix-print-service",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Automatically print tickets when checking in with Pretix",
   "main": "electron.js",
   "scripts": {
