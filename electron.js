@@ -76,6 +76,7 @@ ipcMain.handle('get-api-log',       () => getApiLog());
 ipcMain.handle('get-organizers',    (_, token) => getOrganizers(token));
 ipcMain.handle('get-events',        (_, token, org) => getEvents(token, org));
 ipcMain.handle('reprint-badge',         (_, logId, positionId) => reprintPosition(logId, positionId));
+ipcMain.handle('get-version',           () => app.getVersion());
 ipcMain.handle('clear-checkins',        () => clearCheckins());
 ipcMain.handle('get-badge-layout-name', () => getBadgeLayoutName());
 ipcMain.handle('refresh-badge-cache',   () => refreshBadgeCache());

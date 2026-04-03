@@ -255,7 +255,11 @@ async function init() {
   // ── Status bar ────────────────────────────────────────────────
   document.getElementById('statusRefreshBtn').addEventListener('click', checkStatus);
   checkStatus();
-  setInterval(checkStatus, 30000); // auto-refresh every 30s
+  setInterval(checkStatus, 30000);
+
+  window.api.getVersion().then(v => {
+    document.getElementById('statusVersion').textContent = `v${v}`;
+  }); // auto-refresh every 30s
 }
 
 async function refreshLog() {
