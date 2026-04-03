@@ -18,9 +18,13 @@ async function generateBadgePdf(order, details) {
     backgroundBytes = await getCachedBackground(layout.background);
   }
   const values = {
-    attendee_name: details.name,
-    order_code:    details.order_code || order,
-    secret:        details.secret || ''
+    attendee_name:               details.name,
+    'attendee_name:given_name':  details.first_name,
+    'attendee_name:family_name': details.last_name,
+    attendee_company:            details.attendee_company,
+    attendee_email:              details.attendee_email,
+    order_code:                  details.order_code || order,
+    secret:                      details.secret
   };
   return renderBadge(layout ? layout.layout : [], backgroundBytes, values, showBackground);
 }
@@ -52,21 +56,28 @@ function startPolling() {
   pollTimer = setInterval(async () => {
     const since = lastPollTime;
     const now = new Date().toISOString();
+    // Snapshot config at the start of this tick to detect mid-cycle changes
+    const { PRETIX_ORGANIZER: pollOrg, PRETIX_EVENT: pollEvent } = getConfig();
     try {
       const checkins = await getRecentCheckins(since);
       lastPollTime = now;
       for (const checkin of checkins) {
-        let attendeeName = '—';
+        // Verify config hasn't changed since the API call was made
+        const { PRETIX_ORGANIZER: curOrg, PRETIX_EVENT: curEvent } = getConfig();
+        if (curOrg !== pollOrg || curEvent !== pollEvent) {
+          console.warn('Configurazione evento cambiata durante il polling — check-in ignorati.');
+          break;
+        }
+
         let details = null;
         try {
           details = await getPositionDetails(checkin.position);
-          attendeeName = details.name;
         } catch (err) {
           console.error(`Errore dettagli check-in [${checkin.order}]:`, err.message);
         }
 
         // Always log immediately
-        const logId = logPrint({ order: checkin.order, positionid: checkin.position, name: attendeeName, timestamp: checkin.datetime });
+        const logId = logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime, details });
 
         // Print badge in background if auto-print is active
         if (autoPrint && details) {

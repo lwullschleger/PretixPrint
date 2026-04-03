@@ -4,7 +4,7 @@ const fs = require('fs');
 const dataDir = path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
-const dbPath = path.join(dataDir, 'prints.json');
+const dbPath = path.join(dataDir, 'checkins.json');
 
 function readAll() {
   if (!fs.existsSync(dbPath)) return [];
@@ -19,10 +19,36 @@ function writeAll(records) {
   fs.writeFileSync(dbPath, JSON.stringify(records, null, 2));
 }
 
-function logPrint({ order, positionid, name, timestamp }) {
+function logPrint({ order, positionid, timestamp, details }) {
   const records = readAll();
+  const existing = records.find(r => r.position_id === positionid);
+  if (existing) {
+    existing.timestamp        = timestamp;
+    existing.printed          = false;
+    existing.order_code       = order;
+    existing.attendee_name    = details?.name             || existing.attendee_name;
+    existing.first_name       = details?.first_name       ?? existing.first_name;
+    existing.last_name        = details?.last_name        ?? existing.last_name;
+    existing.attendee_company = details?.attendee_company ?? existing.attendee_company;
+    existing.attendee_email   = details?.attendee_email   ?? existing.attendee_email;
+    existing.secret           = details?.secret           ?? existing.secret;
+    writeAll(records);
+    return existing.id;
+  }
   const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
-  records.push({ id, attendee_name: name || '—', order_code: order, position_id: positionid, timestamp, printed: false });
+  records.push({
+    id,
+    position_id:      positionid,
+    order_code:       order,
+    timestamp,
+    printed:          false,
+    attendee_name:    details?.name             || '—',
+    first_name:       details?.first_name       || '',
+    last_name:        details?.last_name        || '',
+    attendee_company: details?.attendee_company || '',
+    attendee_email:   details?.attendee_email   || '',
+    secret:           details?.secret           || ''
+  });
   writeAll(records);
   return id;
 }
@@ -38,4 +64,8 @@ function getRecentPrints(limit = 50) {
   return records.slice(-limit).reverse();
 }
 
-module.exports = { logPrint, markPrinted, getRecentPrints };
+function clearCheckins() {
+  writeAll([]);
+}
+
+module.exports = { logPrint, markPrinted, getRecentPrints, clearCheckins };

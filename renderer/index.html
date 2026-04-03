@@ -31,7 +31,7 @@
         <h2>Check-in effettuati</h2>
         <table id="logTable">
           <thead>
-            <tr><th>#</th><th>Data/Ora</th><th>Nome</th><th>Stampato</th><th></th></tr>
+            <tr><th>#</th><th>Data/Ora</th><th>Nome</th><th>Azienda</th><th>Stampato</th><th></th></tr>
           </thead>
           <tbody></tbody>
         </table>
@@ -124,6 +124,7 @@
           <button type="submit" id="saveConfigBtn">Salva configurazione</button>
           <span id="unsavedMsg"></span>
           <span id="saveStatus"></span>
+          <button type="button" id="clearCheckinsBtn" class="danger-btn">Cancella Check-in effettuati</button>
         </div>
 
       </form>
@@ -136,6 +137,10 @@
         <label class="filter-toggle">
           <input type="checkbox" id="apiLogErrorFilter">
           Solo errori (4xx / 5xx)
+        </label>
+        <label class="filter-toggle">
+          <input type="checkbox" id="apiLogHideDebug" checked>
+          Nascondi debug
         </label>
       </div>
       <table id="apiLogTable">
@@ -157,6 +162,17 @@
       <span class="status-label">Polling: --s</span>
     </span>
     <span class="status-refresh" id="statusRefreshBtn" title="Aggiorna stato">↻</span>
+  </div>
+
+  <!-- ── Error modal ────────────────────────────────────────── -->
+  <div id="errorModal" class="error-modal" style="display:none">
+    <div class="error-modal-box">
+      <div class="error-modal-title">Errore</div>
+      <pre id="errorModalMsg" class="error-modal-msg"></pre>
+      <div class="error-modal-actions">
+        <button id="errorModalOk">OK</button>
+      </div>
+    </div>
   </div>
 
   <script src="renderer.js"></script>

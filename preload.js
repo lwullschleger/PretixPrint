@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('api', {
   getEvents:          (token, org) => ipcRenderer.invoke('get-events', token, org),
   reprintBadge:         (logId, positionId) => ipcRenderer.invoke('reprint-badge', logId, positionId),
   previewBadge:         (logId, positionId) => ipcRenderer.invoke('preview-badge', logId, positionId),
+  clearCheckins:        () => ipcRenderer.invoke('clear-checkins'),
+  onError:              (cb) => ipcRenderer.on('show-error', (_, msg) => cb(msg)),
   getBadgeLayoutName:   () => ipcRenderer.invoke('get-badge-layout-name'),
   refreshBadgeCache:    () => ipcRenderer.invoke('refresh-badge-cache')
 });

@@ -1,4 +1,34 @@
 const CONFIG_KEYS = ['PRETIX_API_TOKEN', 'POLL_INTERVAL'];
+
+// ── Error modal ───────────────────────────────────────────────
+const _errorQueue = [];
+let _errorModalOpen = false;
+
+function showNextError() {
+  if (_errorModalOpen || _errorQueue.length === 0) return;
+  _errorModalOpen = true;
+  const modal = document.getElementById('errorModal');
+  document.getElementById('errorModalMsg').textContent = _errorQueue.shift();
+  modal.style.display = 'flex';
+}
+
+function initErrorModal() {
+  document.getElementById('errorModalOk').addEventListener('click', () => {
+    document.getElementById('errorModal').style.display = 'none';
+    _errorModalOpen = false;
+    showNextError();
+  });
+  window.api.onError(msg => {
+    _errorQueue.push(msg);
+    showNextError();
+  });
+  window.addEventListener('unhandledrejection', e => {
+    _errorQueue.push(e.reason?.message || String(e.reason));
+    showNextError();
+  });
+}
+
+initErrorModal();
 let configDirty = false;
 let _pollCountdownTimer = null;
 
@@ -193,6 +223,14 @@ async function init() {
     checkStatus(); // refresh status bar after saving
   });
 
+  // ── Clear checkins ────────────────────────────────────────────
+  document.getElementById('clearCheckinsBtn').addEventListener('click', async () => {
+    const ok = confirm('Sei sicuro di voler cancellare tutti i check-in effettuati?\nL\'operazione non è reversibile.');
+    if (!ok) return;
+    await window.api.clearCheckins();
+    await refreshLog();
+  });
+
   // ── Badge layout info ─────────────────────────────────────────
   async function refreshBadgeLayoutName() {
     const name = await window.api.getBadgeLayoutName();
@@ -211,6 +249,7 @@ async function init() {
 
   // ── API log auto-refresh ──────────────────────────────────────
   document.getElementById('apiLogErrorFilter').addEventListener('change', refreshApiLog);
+  document.getElementById('apiLogHideDebug').addEventListener('change', refreshApiLog);
   setInterval(refreshApiLog, 2000);
 
   // ── Status bar ────────────────────────────────────────────────
@@ -229,7 +268,7 @@ async function refreshLog() {
       ? '<span class="printed-flag printed-yes" title="Badge stampato">&#10003;</span>'
       : '<span class="printed-flag printed-no" title="Non stampato">&ndash;</span>';
     const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('it-IT', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
-    tr.innerHTML = `<td>${r.id}</td><td>${ts}</td><td>${r.attendee_name || '—'}</td><td>${printedFlag}</td><td></td>`;
+    tr.innerHTML = `<td>${r.id}</td><td>${ts}</td><td>${r.attendee_name || '—'}</td><td>${r.attendee_company || '—'}</td><td>${printedFlag}</td><td></td>`;
     const btnCell = tr.querySelector('td:last-child');
 
     const btn = document.createElement('button');
@@ -267,8 +306,10 @@ async function refreshLog() {
 
 async function refreshApiLog() {
   const errorsOnly = document.getElementById('apiLogErrorFilter')?.checked;
+  const hideDebug  = document.getElementById('apiLogHideDebug')?.checked;
   let rows = await window.api.getApiLog();
   if (errorsOnly) rows = rows.filter(r => !r.ok);
+  if (hideDebug)  rows = rows.filter(r => !r.debug);
   const tbody = document.querySelector('#apiLogTable tbody');
   tbody.innerHTML = '';
   rows.forEach(r => {

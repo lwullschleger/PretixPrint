@@ -4,12 +4,32 @@ const os = require('os');
 const fs = require('fs');
 const { getPrinters } = require('pdf-to-printer');
 const { setSelectedPrinter, getSelectedPrinter, testPrint } = require('./server/printer');
-const { getRecentPrints } = require('./server/db');
+const { getRecentPrints, clearCheckins } = require('./server/db');
 const { setAutoPrint, reprintPosition, previewPosition } = require('./server/index');
 const { getConfig, saveConfig } = require('./server/config');
 const { checkStatus, getApiLog, getOrganizers, getEvents, clearBadgeLayoutCache, warmBadgeCache, getBadgeLayoutName, refreshBadgeCache } = require('./server/pretixApi');
 
 Menu.setApplicationMenu(null);
+
+// ── Error forwarding to renderer ──────────────────────────────
+let mainWindow;
+
+function sendError(msg) {
+  try { mainWindow?.webContents.send('show-error', msg); } catch {}
+}
+
+const _origConsoleError = console.error.bind(console);
+console.error = (...args) => {
+  _origConsoleError(...args);
+  const msg = args.map(a => (a instanceof Error ? a.stack || a.message : String(a))).join(' ');
+  sendError(msg);
+};
+
+process.on('unhandledRejection', (reason) => {
+  const msg = reason instanceof Error ? (reason.stack || reason.message) : String(reason);
+  _origConsoleError('Unhandled rejection:', msg);
+  sendError(msg);
+});
 
 // Restore selected printer from persisted config
 const _initCfg = getConfig();
@@ -17,8 +37,6 @@ if (_initCfg.SELECTED_PRINTER) setSelectedPrinter(_initCfg.SELECTED_PRINTER);
 
 // Pre-load badge layout + background PDF into memory cache
 warmBadgeCache();
-
-let mainWindow;
 
 app.whenReady().then(() => {
   mainWindow = new BrowserWindow({
@@ -45,6 +63,7 @@ ipcMain.handle('get-api-log',       () => getApiLog());
 ipcMain.handle('get-organizers',    (_, token) => getOrganizers(token));
 ipcMain.handle('get-events',        (_, token, org) => getEvents(token, org));
 ipcMain.handle('reprint-badge',         (_, logId, positionId) => reprintPosition(logId, positionId));
+ipcMain.handle('clear-checkins',        () => clearCheckins());
 ipcMain.handle('get-badge-layout-name', () => getBadgeLayoutName());
 ipcMain.handle('refresh-badge-cache',   () => refreshBadgeCache());
 ipcMain.handle('preview-badge',     async (_, logId, positionId) => {

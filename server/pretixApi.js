@@ -7,10 +7,10 @@ const BASE = 'https://pretix.eu/api/v1';
 const apiLog = [];
 const MAX_LOG = 200;
 
-function logCall(method, url, status, ok) {
+function logCall(method, url, status, ok, debug = false) {
   const endpoint = url.replace(BASE, '');
   const timestamp = new Date().toLocaleTimeString('it-IT');
-  apiLog.unshift({ timestamp, method, endpoint, status, ok });
+  apiLog.unshift({ timestamp, method, endpoint, status, ok, debug });
   if (apiLog.length > MAX_LOG) apiLog.length = MAX_LOG;
 }
 
@@ -40,11 +40,20 @@ async function getPositionDetails(positionId) {
     const res = await axios.get(url, { headers: { Authorization: `Token ${TOKEN}` } });
     logCall('GET', url, res.status, true);
     const d = res.data;
-    const name = d.attendee_name ||
-      (d.attendee_name_parts
-        ? [d.attendee_name_parts.given_name, d.attendee_name_parts.family_name].filter(Boolean).join(' ')
-        : '—');
-    return { name, order_code: d.order, secret: d.secret };
+    const parts = d.attendee_name_parts || {};
+    const first_name = parts.given_name || '';
+    const last_name  = parts.family_name || '';
+    const name = d.attendee_name || [first_name, last_name].filter(Boolean).join(' ') || '—';
+
+    return {
+      name,
+      first_name,
+      last_name,
+      attendee_company: d.company        || '',
+      attendee_email:   d.attendee_email || '',
+      order_code:       d.order,
+      secret:           d.secret         || ''
+    };
   } catch (err) {
     logCall('GET', url, err.response?.status ?? 0, false);
     throw err;
@@ -66,12 +75,12 @@ async function getDefaultBadgeLayout() {
   const url = `${BASE}/organizers/${ORG}/events/${EVENT}/badgelayouts/`;
   try {
     const res = await axios.get(url, { headers: { Authorization: `Token ${TOKEN}` } });
-    logCall('GET', url, res.status, true);
+    logCall('GET', url, res.status, true, true);
     const layouts = res.data.results || [];
     _badgeLayoutCache = layouts.find(l => l.default) || layouts[0] || null;
     return _badgeLayoutCache;
   } catch (err) {
-    logCall('GET', url, err.response?.status ?? 0, false);
+    logCall('GET', url, err.response?.status ?? 0, false, true);
     return null;
   }
 }
@@ -129,10 +138,10 @@ async function checkStatus() {
       headers: { Authorization: `Token ${token}` },
       timeout: 5000
     });
-    logCall('GET', orgUrl, res.status, true);
+    logCall('GET', orgUrl, res.status, true, true);
   } catch (err) {
     const status = err.response?.status;
-    logCall('GET', orgUrl, status ?? 0, false);
+    logCall('GET', orgUrl, status ?? 0, false, true);
     if (status === 401 || status === 403) return { api: false, organizer: false, event: false };
     if (status === 404) return { api: true, organizer: false, event: false };
     return { api: false, organizer: false, event: false };
@@ -146,10 +155,10 @@ async function checkStatus() {
       headers: { Authorization: `Token ${token}` },
       timeout: 5000
     });
-    logCall('GET', eventUrl, res.status, true);
+    logCall('GET', eventUrl, res.status, true, true);
     return { api: true, organizer: true, event: true };
   } catch (err) {
-    logCall('GET', eventUrl, err.response?.status ?? 0, false);
+    logCall('GET', eventUrl, err.response?.status ?? 0, false, true);
     return { api: true, organizer: true, event: false };
   }
 }
@@ -162,10 +171,10 @@ async function getRecentCheckins(since) {
       headers: { Authorization: `Token ${TOKEN}` },
       params: { datetime_since: since, ordering: 'datetime', type: 'entry' }
     });
-    logCall('GET', url, response.status, true);
+    logCall('GET', url, response.status, true, true);
     return response.data.results;
   } catch (err) {
-    logCall('GET', url, err.response?.status ?? 0, false);
+    logCall('GET', url, err.response?.status ?? 0, false, true);
     throw err;
   }
 }
