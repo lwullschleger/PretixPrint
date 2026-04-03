@@ -17,9 +17,9 @@ function logCall(method, url, status, ok) {
 function getApiLog() { return apiLog; }
 
 // ── API functions ─────────────────────────────────────────────
-async function getTicketPDF(orderCode, positionId) {
+async function getBadgePDF(positionId) {
   const { PRETIX_ORGANIZER: ORG, PRETIX_EVENT: EVENT, PRETIX_API_TOKEN: TOKEN } = getConfig();
-  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/orders/${orderCode}/positions/${positionId}/pdf/`;
+  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/orderpositions/${positionId}/download/badge/`;
   try {
     const response = await axios.get(url, {
       headers: { Authorization: `Token ${TOKEN}` },
@@ -27,6 +27,24 @@ async function getTicketPDF(orderCode, positionId) {
     });
     logCall('GET', url, response.status, true);
     return response.data;
+  } catch (err) {
+    logCall('GET', url, err.response?.status ?? 0, false);
+    throw err;
+  }
+}
+
+async function getPositionDetails(positionId) {
+  const { PRETIX_ORGANIZER: ORG, PRETIX_EVENT: EVENT, PRETIX_API_TOKEN: TOKEN } = getConfig();
+  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/orderpositions/${positionId}/`;
+  try {
+    const res = await axios.get(url, { headers: { Authorization: `Token ${TOKEN}` } });
+    logCall('GET', url, res.status, true);
+    const d = res.data;
+    const name = d.attendee_name ||
+      (d.attendee_name_parts
+        ? [d.attendee_name_parts.given_name, d.attendee_name_parts.family_name].filter(Boolean).join(' ')
+        : '—');
+    return { name };
   } catch (err) {
     logCall('GET', url, err.response?.status ?? 0, false);
     throw err;
@@ -122,4 +140,4 @@ async function getEvents(token, org) {
   });
 }
 
-module.exports = { getTicketPDF, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };
+module.exports = { getBadgePDF, getPositionDetails, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };

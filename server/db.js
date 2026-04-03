@@ -19,10 +19,10 @@ function writeAll(records) {
   fs.writeFileSync(dbPath, JSON.stringify(records, null, 2));
 }
 
-function logPrint({ order, positionid, timestamp }) {
+function logPrint({ order, positionid, name, timestamp }) {
   const records = readAll();
   const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
-  records.push({ id, order_code: order, position_id: positionid, timestamp });
+  records.push({ id, attendee_name: name || '—', order_code: order, position_id: positionid, timestamp });
   writeAll(records);
 }
 

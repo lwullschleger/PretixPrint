@@ -78,7 +78,7 @@ async function init() {
   const tbody = document.querySelector('#logTable tbody');
   rows.forEach(r => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.id}</td><td>${r.order_code}</td><td>${r.position_id}</td><td>${r.timestamp}</td>`;
+    tr.innerHTML = `<td>${r.id}</td><td>${r.attendee_name || '—'}</td><td>${r.order_code}</td><td>${r.timestamp}</td>`;
     tbody.appendChild(tr);
   });
 

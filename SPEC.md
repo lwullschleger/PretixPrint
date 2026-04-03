@@ -215,8 +215,14 @@ function getRecentPrints(limit = 50) {
 ```javascript
 const BASE = 'https://pretix.eu/api/v1';
 
-// Scarica il PDF di un biglietto
-async function getTicketPDF(orderCode, positionId) { ... }
+// Scarica il badge PDF di una posizione
+async function getBadgePDF(positionId) { ... }
+// Endpoint: GET /orderpositions/{id}/download/badge/
+
+// Recupera nome partecipante da una posizione
+async function getPositionDetails(positionId) { ... }
+// Endpoint: GET /orderpositions/{id}/
+// Restituisce { name } da attendee_name o attendee_name_parts
 
 // Verifica connettività API, organizer ed evento
 async function checkStatus() { ... }

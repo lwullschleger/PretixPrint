@@ -1,6 +1,6 @@
 const { downloadAndPrint } = require('./printer');
 const { logPrint } = require('./db');
-const { getTicketPDF, getRecentCheckins } = require('./pretixApi');
+const { getBadgePDF, getPositionDetails, getRecentCheckins } = require('./pretixApi');
 const { getConfig } = require('./config');
 
 let autoPrint = true;
@@ -17,9 +17,10 @@ function startPolling() {
       lastPollTime = now;
       for (const checkin of checkins) {
         if (!autoPrint) continue;
-        const pdfBuffer = await getTicketPDF(checkin.order, checkin.position);
+        const details = await getPositionDetails(checkin.position);
+        const pdfBuffer = await getBadgePDF(checkin.position);
         await downloadAndPrint(pdfBuffer);
-        logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime });
+        logPrint({ order: checkin.order, positionid: checkin.position, name: details.name, timestamp: checkin.datetime });
       }
     } catch (err) {
       console.error('Polling error:', err.message);
