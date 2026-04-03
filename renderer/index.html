@@ -21,6 +21,12 @@
     <!-- ── Dashboard ─────────────────────────────────── -->
     <div id="tab-dashboard" class="tab-pane active">
 
+      <div class="dashboard-header">
+        <span id="autoPrintWarning" class="autoprint-warning" style="display:none">
+          Stampa automatica disattivata
+        </span>
+      </div>
+
       <div class="log-section">
         <h2>Log di stampa</h2>
         <table id="logTable">
@@ -36,14 +42,13 @@
     <!-- ── Configurazione ─────────────────────────────── -->
     <div id="tab-config" class="tab-pane">
 
-      <h2>Configurazione Pretix</h2>
-
       <form id="configForm">
 
         <div class="config-columns">
 
           <!-- ── Colonna sinistra ── -->
           <div class="config-col">
+            <h3 class="config-col-title">Stampa</h3>
 
             <div class="form-group">
               <label>Stampante</label>
@@ -68,10 +73,17 @@
               <small>Scarica il PDF di sfondo configurato nel layout badge dell'evento e lo usa come base per la stampa.</small>
             </div>
 
+            <div class="form-group">
+              <label>Intervallo polling (secondi)</label>
+              <input type="number" id="cfg-POLL_INTERVAL" placeholder="5" min="1" max="60">
+              <small>Ogni quanti secondi l'app interroga Pretix per nuovi check-in (default: 5). Una modifica richiede il riavvio dell'app.</small>
+            </div>
+
           </div>
 
           <!-- ── Colonna destra ── -->
           <div class="config-col">
+            <h3 class="config-col-title">Pretix</h3>
 
             <div class="form-group">
               <label>API Token</label>
@@ -94,12 +106,6 @@
               <select id="cfg-PRETIX_EVENT" disabled>
                 <option value="">— seleziona prima l'organizzatore —</option>
               </select>
-            </div>
-
-            <div class="form-group">
-              <label>Intervallo polling (secondi)</label>
-              <input type="number" id="cfg-POLL_INTERVAL" placeholder="5" min="1" max="60">
-              <small>Ogni quanti secondi l'app interroga Pretix per nuovi check-in (default: 5). Una modifica richiede il riavvio dell'app.</small>
             </div>
 
           </div>

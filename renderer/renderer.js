@@ -11,6 +11,11 @@ function startPollCountdown(intervalSec) {
   _pollCountdownTimer = setInterval(tick, 1000);
 }
 
+function updateAutoPrintWarning(active) {
+  const el = document.getElementById('autoPrintWarning');
+  el.style.display = active ? 'none' : 'inline-block';
+}
+
 function setConfigDirty(dirty) {
   configDirty = dirty;
   const saveBtn = document.getElementById('saveConfigBtn');
@@ -97,6 +102,7 @@ async function init() {
   });
   startPollCountdown(parseInt(cfg.POLL_INTERVAL) || 5);
   badgeBgToggle.checked = cfg.BADGE_USE_BACKGROUND === 'true';
+  updateAutoPrintWarning(toggle.checked);
 
   // ── Cascading dropdowns: organizer & event ────────────────────
   const orgSelect = document.getElementById('cfg-PRETIX_ORGANIZER');
@@ -182,6 +188,7 @@ async function init() {
     window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);
     setConfigDirty(false);
+    updateAutoPrintWarning(toggle.checked);
     startPollCountdown(parseInt(newCfg.POLL_INTERVAL) || 5);
     const saveStatus = document.getElementById('saveStatus');
     saveStatus.textContent = 'Salvato!';

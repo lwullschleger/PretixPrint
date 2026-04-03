@@ -83,6 +83,23 @@ body {
   margin-bottom: 18px;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 24px;
+  margin-bottom: 10px;
+}
+
+.autoprint-warning {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e65100;
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
 .log-section {
   margin-top: 4px;
 }
@@ -151,10 +168,26 @@ tr:hover td { background: #f9f9f9; }
 
 /* ── API Log tab ─────────────────────────────────────── */
 
+.apilog-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
 #tab-apilog h2 {
   font-size: 1rem;
   font-weight: 600;
-  margin-bottom: 10px;
+}
+
+.filter-toggle {
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: normal;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 #apiLogTable .endpoint {
@@ -201,6 +234,17 @@ tr:hover td { background: #f9f9f9; }
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.config-col-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #888;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .form-group {
