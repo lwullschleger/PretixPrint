@@ -2,6 +2,11 @@ const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
+
+// Must be set before requiring server modules, so they use the correct writable path
+// (inside app.asar __dirname is not writable)
+process.env.DATA_DIR = app.getPath('userData');
+
 const { getPrinters } = require('pdf-to-printer');
 const { setSelectedPrinter, getSelectedPrinter, testPrint } = require('./server/printer');
 const { getRecentPrints, clearCheckins } = require('./server/db');
