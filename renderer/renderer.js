@@ -73,6 +73,10 @@ async function init() {
   const toggle = document.getElementById('autoPrintToggle');
   toggle.addEventListener('change', () => setConfigDirty(true));
 
+  // ── Badge background toggle ───────────────────────────────────
+  const badgeBgToggle = document.getElementById('badgeBackgroundToggle');
+  badgeBgToggle.addEventListener('change', () => setConfigDirty(true));
+
   // ── Print log ─────────────────────────────────────────────────
   const rows = await window.api.getLog();
   const tbody = document.querySelector('#logTable tbody');
@@ -92,6 +96,7 @@ async function init() {
     }
   });
   startPollCountdown(parseInt(cfg.POLL_INTERVAL) || 5);
+  badgeBgToggle.checked = cfg.BADGE_USE_BACKGROUND === 'true';
 
   // ── Cascading dropdowns: organizer & event ────────────────────
   const orgSelect = document.getElementById('cfg-PRETIX_ORGANIZER');
@@ -172,6 +177,7 @@ async function init() {
     });
     newCfg.PRETIX_ORGANIZER = orgSelect.value;
     newCfg.PRETIX_EVENT = eventSelect.value;
+    newCfg.BADGE_USE_BACKGROUND = String(badgeBgToggle.checked);
     await window.api.setPrinter(select.value);
     window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);
@@ -184,6 +190,7 @@ async function init() {
   });
 
   // ── API log auto-refresh ──────────────────────────────────────
+  document.getElementById('apiLogErrorFilter').addEventListener('change', refreshApiLog);
   setInterval(refreshApiLog, 2000);
 
   // ── Status bar ────────────────────────────────────────────────
@@ -193,7 +200,9 @@ async function init() {
 }
 
 async function refreshApiLog() {
-  const rows = await window.api.getApiLog();
+  const errorsOnly = document.getElementById('apiLogErrorFilter')?.checked;
+  let rows = await window.api.getApiLog();
+  if (errorsOnly) rows = rows.filter(r => !r.ok);
   const tbody = document.querySelector('#apiLogTable tbody');
   tbody.innerHTML = '';
   rows.forEach(r => {

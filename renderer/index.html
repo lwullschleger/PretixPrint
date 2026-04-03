@@ -60,6 +60,14 @@
               </label>
             </div>
 
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="badgeBackgroundToggle">
+                Usa sfondo badge da Pretix
+              </label>
+              <small>Scarica il PDF di sfondo configurato nel layout badge dell'evento e lo usa come base per la stampa.</small>
+            </div>
+
           </div>
 
           <!-- ── Colonna destra ── -->
@@ -109,7 +117,13 @@
 
     <!-- ── Log API ───────────────────────────────────── -->
     <div id="tab-apilog" class="tab-pane">
-      <h2>Log chiamate API</h2>
+      <div class="apilog-header">
+        <h2>Log chiamate API</h2>
+        <label class="filter-toggle">
+          <input type="checkbox" id="apiLogErrorFilter">
+          Solo errori (4xx / 5xx)
+        </label>
+      </div>
       <table id="apiLogTable">
         <thead>
           <tr><th>Ora</th><th>Metodo</th><th>Endpoint</th><th>Status</th></tr>

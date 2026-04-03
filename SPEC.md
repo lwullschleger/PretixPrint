@@ -215,14 +215,17 @@ function getRecentPrints(limit = 50) {
 ```javascript
 const BASE = 'https://pretix.eu/api/v1';
 
-// Scarica il badge PDF di una posizione
-async function getBadgePDF(positionId) { ... }
-// Endpoint: GET /orderpositions/{id}/download/badge/
-
-// Recupera nome partecipante da una posizione
+// Recupera dati partecipante da una posizione
 async function getPositionDetails(positionId) { ... }
 // Endpoint: GET /orderpositions/{id}/
-// Restituisce { name } da attendee_name o attendee_name_parts
+// Restituisce { name, order_code, secret }
+
+// Recupera il layout badge default dell'evento (con cache, invalidata al salvataggio config)
+async function getDefaultBadgeLayout() { ... }
+// Endpoint: GET /badgelayouts/ — cerca il layout con default: true
+
+// Scarica il PDF di sfondo del badge layout (richiede auth token)
+async function downloadBackground(url) { ... }
 
 // Verifica connettività API, organizer ed evento
 async function checkStatus() { ... }
@@ -299,6 +302,7 @@ I parametri vengono salvati in `data/config.json` e ricaricati automaticamente a
 | Evento | Selezionato da dropdown a cascata via `GET /api/v1/organizers/{org}/events/` |
 | Intervallo polling | Secondi tra una chiamata e l'altra all'API (default: 5). Modificabile dalla UI; richiede riavvio. |
 | Stampante selezionata | Nome della stampante scelta nella Dashboard; salvata in `data/config.json` e ripristinata all'avvio. |
+| Usa sfondo badge | Se abilitato, scarica il PDF di sfondo dal layout badge default di Pretix e lo usa come base per la stampa. |
 
 > Non esistono più file `.env` nel progetto.
 

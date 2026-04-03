@@ -44,10 +44,45 @@ async function getPositionDetails(positionId) {
       (d.attendee_name_parts
         ? [d.attendee_name_parts.given_name, d.attendee_name_parts.family_name].filter(Boolean).join(' ')
         : '—');
-    return { name };
+    return { name, order_code: d.order, secret: d.secret };
   } catch (err) {
     logCall('GET', url, err.response?.status ?? 0, false);
     throw err;
+  }
+}
+
+// ── Badge layout ──────────────────────────────────────────────
+let _badgeLayoutCache = null;
+
+function clearBadgeLayoutCache() { _badgeLayoutCache = null; }
+
+async function getDefaultBadgeLayout() {
+  if (_badgeLayoutCache) return _badgeLayoutCache;
+  const { PRETIX_ORGANIZER: ORG, PRETIX_EVENT: EVENT, PRETIX_API_TOKEN: TOKEN } = getConfig();
+  const url = `${BASE}/organizers/${ORG}/events/${EVENT}/badgelayouts/`;
+  try {
+    const res = await axios.get(url, { headers: { Authorization: `Token ${TOKEN}` } });
+    logCall('GET', url, res.status, true);
+    const layouts = res.data.results || [];
+    _badgeLayoutCache = layouts.find(l => l.default) || layouts[0] || null;
+    return _badgeLayoutCache;
+  } catch (err) {
+    logCall('GET', url, err.response?.status ?? 0, false);
+    return null;
+  }
+}
+
+async function downloadBackground(backgroundUrl) {
+  const { PRETIX_API_TOKEN: TOKEN } = getConfig();
+  try {
+    const res = await axios.get(backgroundUrl, {
+      headers: { Authorization: `Token ${TOKEN}` },
+      responseType: 'arraybuffer'
+    });
+    return Buffer.from(res.data);
+  } catch (err) {
+    console.error('Badge: impossibile scaricare il background:', err.message);
+    return null;
   }
 }
 
@@ -140,4 +175,4 @@ async function getEvents(token, org) {
   });
 }
 
-module.exports = { getBadgePDF, getPositionDetails, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };
+module.exports = { getPositionDetails, getDefaultBadgeLayout, downloadBackground, clearBadgeLayoutCache, checkStatus, getRecentCheckins, getApiLog, getOrganizers, getEvents };

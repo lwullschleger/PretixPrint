@@ -1,6 +1,7 @@
 const { downloadAndPrint } = require('./printer');
 const { logPrint } = require('./db');
-const { getBadgePDF, getPositionDetails, getRecentCheckins } = require('./pretixApi');
+const { getPositionDetails, getDefaultBadgeLayout, downloadBackground, getRecentCheckins } = require('./pretixApi');
+const { renderBadge } = require('./badgeRenderer');
 const { getConfig } = require('./config');
 
 let autoPrint = true;
@@ -18,7 +19,19 @@ function startPolling() {
       for (const checkin of checkins) {
         if (!autoPrint) continue;
         const details = await getPositionDetails(checkin.position);
-        const pdfBuffer = await getBadgePDF(checkin.position);
+        const cfg = getConfig();
+        const useBackground = cfg.BADGE_USE_BACKGROUND === 'true';
+        const layout = await getDefaultBadgeLayout();
+        let backgroundBytes = null;
+        if (useBackground && layout && layout.background && typeof layout.background === 'string') {
+          backgroundBytes = await downloadBackground(layout.background);
+        }
+        const values = {
+          attendee_name: details.name,
+          order_code:    details.order_code || checkin.order,
+          secret:        details.secret || ''
+        };
+        const pdfBuffer = await renderBadge(layout ? layout.layout : [], backgroundBytes, values);
         await downloadAndPrint(pdfBuffer);
         logPrint({ order: checkin.order, positionid: checkin.position, name: details.name, timestamp: checkin.datetime });
       }
