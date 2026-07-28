@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -23,9 +26,7 @@ jobs:
         run: npm ci
 
       - name: Build Windows installer
-        run: npm run build
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build -- --publish never
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -96,7 +96,9 @@ async function init() {
     testBtn.disabled = true;
     testBtn.textContent = 'Stampa in corso...';
     try {
-      await window.api.testPrint();
+      // Test the printer currently selected in the dropdown, even if the
+      // config hasn't been saved yet.
+      await window.api.testPrint(select.value);
       testBtn.textContent = 'Fatto!';
     } catch {
       testBtn.textContent = 'Errore';

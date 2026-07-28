@@ -295,6 +295,8 @@ ipcMain.handle('check-status',         async () => await checkStatus());
 The UI includes a printer selector, auto-print toggle, test print button, and print log table.
 See `renderer/index.html` and `renderer/renderer.js` for implementation.
 
+**Test Print e stampante selezionata:** il bottone **Test Print** stampa sulla stampante attualmente selezionata nel dropdown, **anche se la configurazione non è ancora stata salvata**. Il valore del dropdown viene passato esplicitamente come override (`testPrint(printer)` → `downloadAndPrint(pdfBuffer, printerOverride)`), quindi non serve salvare prima di testare. La `selectedPrinter` persistente (usata dalla stampa automatica dei badge) viene invece aggiornata solo al salvataggio della config.
+
 ### Unsaved Changes Tracking (Config tab)
 
 La scheda **Configurazione** traccia le modifiche non salvate con un flag `configDirty`:

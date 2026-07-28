@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   getSelectedPrinter: () => ipcRenderer.invoke('get-selected-printer'),
   setAutoPrint:       (v) => ipcRenderer.invoke('set-auto-print', v),
   getLog:             () => ipcRenderer.invoke('get-log'),
-  testPrint:          () => ipcRenderer.invoke('test-print'),
+  testPrint:          (printer) => ipcRenderer.invoke('test-print', printer),
   getConfig:          () => ipcRenderer.invoke('get-config'),
   saveConfig:         (cfg) => ipcRenderer.invoke('save-config', cfg),
   checkStatus:        () => ipcRenderer.invoke('check-status'),

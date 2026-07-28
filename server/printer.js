@@ -13,17 +13,18 @@ function getSelectedPrinter() {
   return selectedPrinter;
 }
 
-async function downloadAndPrint(pdfBuffer) {
+async function downloadAndPrint(pdfBuffer, printerOverride) {
   const tmpPath = path.join(os.tmpdir(), `ticket_${Date.now()}.pdf`);
   fs.writeFileSync(tmpPath, Buffer.from(pdfBuffer));
 
-  const options = selectedPrinter ? { printer: selectedPrinter } : {};
+  const printer = printerOverride || selectedPrinter;
+  const options = printer ? { printer } : {};
   await print(tmpPath, options);
 
   fs.unlinkSync(tmpPath);
 }
 
-async function testPrint() {
+async function testPrint(printerOverride) {
   const PDFDocument = require('pdfkit');
   const { getConfig } = require('./config');
   const { checkStatus } = require('./pretixApi');
@@ -39,7 +40,7 @@ async function testPrint() {
     doc.on('data', c => chunks.push(c));
     doc.on('end', async () => {
       try {
-        await downloadAndPrint(Buffer.concat(chunks));
+        await downloadAndPrint(Buffer.concat(chunks), printerOverride);
         resolve();
       } catch (err) { reject(err); }
     });
