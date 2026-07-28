@@ -191,16 +191,32 @@ module.exports = { setAutoPrint: (v) => { autoPrint = v; } };
 
 ## 7. JSON Log (`server/db.js`)
 
-The print log is stored as a JSON array in `data/prints.json`.
-Each entry has: `id`, `order_code`, `position_id`, `timestamp`.
+The check-in log is stored as a JSON array in `data/checkins.json`.
+Ogni voce ha: `id`, `position_id`, `order_code`, `timestamp`, `printed` (booleano) e i dati partecipante (`attendee_name`, `first_name`, `last_name`, `attendee_company`, `attendee_email`, `secret`).
+
+**Deduplica stampa (una sola stampa per badge):**
+Il record è identificato univocamente dalla `position_id`. Se arriva un check-in per una `position_id` **già presente** (riscansione dello stesso biglietto con PretixScan), `logPrint` aggiorna i dati ma **preserva** il flag `printed`, così un badge già stampato non viene ristampato in automatico. Se invece la prima stampa era fallita (`printed` resta `false`), una riscansione la riprova.
+
+`logPrint` restituisce `{ id, printed }`, dove `printed` è lo stato **prima** di questo check-in. `server/index.js` avvia la stampa automatica solo se `autoPrint && details && !printed`. La ristampa manuale dalla UI resta sempre disponibile e chiama `markPrinted` indipendentemente da questo flag.
 
 ```javascript
-function logPrint({ order, positionid, timestamp }) {
+function logPrint({ order, positionid, timestamp, details }) {
   const records = readAll();
+  const existing = records.find(r => r.position_id === positionid);
+  if (existing) {
+    // riscansione: aggiorna i dati ma PRESERVA `printed`
+    existing.timestamp = timestamp;
+    /* ...aggiorna order_code e dati partecipante... */
+    writeAll(records);
+    return { id: existing.id, printed: existing.printed };
+  }
   const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
-  records.push({ id, order_code: order, position_id: positionid, timestamp });
+  records.push({ id, position_id: positionid, order_code: order, timestamp, printed: false, /* ...dati partecipante... */ });
   writeAll(records);
+  return { id, printed: false };
 }
+
+function markPrinted(id) { /* imposta printed = true sul record */ }
 
 function getRecentPrints(limit = 50) {
   const records = readAll();

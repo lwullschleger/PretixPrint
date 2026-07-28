@@ -23,8 +23,9 @@ function logPrint({ order, positionid, timestamp, details }) {
   const records = readAll();
   const existing = records.find(r => r.position_id === positionid);
   if (existing) {
+    // Rescan of an already-known ticket: refresh data but PRESERVE the
+    // printed state so an already-printed badge is not printed again.
     existing.timestamp        = timestamp;
-    existing.printed          = false;
     existing.order_code       = order;
     existing.attendee_name    = details?.name             || existing.attendee_name;
     existing.first_name       = details?.first_name       ?? existing.first_name;
@@ -33,7 +34,7 @@ function logPrint({ order, positionid, timestamp, details }) {
     existing.attendee_email   = details?.attendee_email   ?? existing.attendee_email;
     existing.secret           = details?.secret           ?? existing.secret;
     writeAll(records);
-    return existing.id;
+    return { id: existing.id, printed: existing.printed };
   }
   const id = records.length > 0 ? records[records.length - 1].id + 1 : 1;
   records.push({
@@ -50,7 +51,7 @@ function logPrint({ order, positionid, timestamp, details }) {
     secret:           details?.secret           || ''
   });
   writeAll(records);
-  return id;
+  return { id, printed: false };
 }
 
 function markPrinted(id) {

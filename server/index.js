@@ -77,10 +77,12 @@ function startPolling() {
         }
 
         // Always log immediately
-        const logId = logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime, details });
+        const { id: logId, printed } = logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime, details });
 
-        // Print badge in background if auto-print is active
-        if (autoPrint && details) {
+        // Print badge in background only if auto-print is active AND this
+        // badge hasn't been printed yet (avoids duplicates on rescans).
+        // A previously failed print keeps printed=false, so it retries.
+        if (autoPrint && details && !printed) {
           printBadge(checkin, details, logId);
         }
       }

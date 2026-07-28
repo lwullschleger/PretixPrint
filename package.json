@@ -1,7 +1,8 @@
 {
   "name": "pretix-print-service",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Automatically print tickets when checking in with Pretix",
+  "author": "Luca Wullschleger",
   "main": "electron.js",
   "scripts": {
     "start": "node launch.js",
