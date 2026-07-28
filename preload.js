@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   getSelectedPrinter: () => ipcRenderer.invoke('get-selected-printer'),
   setAutoPrint:       (v) => ipcRenderer.invoke('set-auto-print', v),
   getLog:             () => ipcRenderer.invoke('get-log'),
-  testPrint:          (printer) => ipcRenderer.invoke('test-print', printer),
+  testPrint:          (override) => ipcRenderer.invoke('test-print', override),
   getConfig:          () => ipcRenderer.invoke('get-config'),
   saveConfig:         (cfg) => ipcRenderer.invoke('save-config', cfg),
   checkStatus:        () => ipcRenderer.invoke('check-status'),
@@ -19,5 +19,5 @@ contextBridge.exposeInMainWorld('api', {
   clearCheckins:        () => ipcRenderer.invoke('clear-checkins'),
   onError:              (cb) => ipcRenderer.on('show-error', (_, msg) => cb(msg)),
   getBadgeLayoutName:   () => ipcRenderer.invoke('get-badge-layout-name'),
-  refreshBadgeCache:    () => ipcRenderer.invoke('refresh-badge-cache')
+  refreshBadgeCache:    (override) => ipcRenderer.invoke('refresh-badge-cache', override)
 });

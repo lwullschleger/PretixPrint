@@ -59,6 +59,39 @@
             </div>
 
             <div class="form-group">
+              <label>Impostazioni di stampa</label>
+              <div class="print-settings">
+                <div class="print-setting">
+                  <span>Formato</span>
+                  <select id="cfg-PRINT_PAPER_SIZE">
+                    <option value="">Default stampante</option>
+                    <option value="A4">A4</option>
+                    <option value="A5">A5</option>
+                    <option value="A6">A6</option>
+                    <option value="Letter">Letter</option>
+                  </select>
+                </div>
+                <div class="print-setting">
+                  <span>Scala</span>
+                  <select id="cfg-PRINT_SCALE">
+                    <option value="noscale">Dimensione reale</option>
+                    <option value="fit">Adatta alla pagina</option>
+                    <option value="shrink">Riduci se necessario</option>
+                  </select>
+                </div>
+                <div class="print-setting">
+                  <span>Orientamento</span>
+                  <select id="cfg-PRINT_ORIENTATION">
+                    <option value="auto">Automatico</option>
+                    <option value="portrait">Verticale</option>
+                    <option value="landscape">Orizzontale</option>
+                  </select>
+                </div>
+              </div>
+              <small>Il badge su Pretix è in A5: usa Formato <b>A5</b> con scala <b>Dimensione reale</b> per una stampa 1:1.</small>
+            </div>
+
+            <div class="form-group">
               <label>
                 <input type="checkbox" id="autoPrintToggle" checked>
                 Stampa automatica al check-in

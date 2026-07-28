@@ -91,7 +91,9 @@ pretix-print-service/
 | `electron-builder` | Build `.exe` installer |
 | `axios` | HTTP client for pretix API (polling + PDF download) |
 | `pdf-to-printer` | Windows printer driver |
-| `pdfkit` | PDF generation (used for test print) |
+| `pdf-lib` | Generazione PDF del badge (`badgeRenderer.js`), usato anche dal Test Print |
+| `qrcode` | Generazione QR/barcode nel badge |
+| `pdfkit` | *(non più usato)* — il Test Print ora renderizza il badge reale; rimovibile in futuro |
 
 > **`express` rimosso**: non è più necessario un server HTTP locale. Il flusso è interamente uscente.
 > `better-sqlite3` rimosso (richiedeva compilazione C++); log e config usano file JSON.
@@ -261,12 +263,34 @@ async function getRecentCheckins(since) {
 
 ## 9. Printer Module (`server/printer.js`)
 
+Le opzioni passate a `pdf-to-printer` (che internamente usa SumatraPDF) vengono
+costruite da `buildPrintOptions()` a partire dalla stampante selezionata e dalle
+**impostazioni di stampa** salvate in config: `PRINT_PAPER_SIZE` (`paperSize`),
+`PRINT_SCALE` (`scale`: `noscale`/`fit`/`shrink`), `PRINT_ORIENTATION`
+(`orientation`: `portrait`/`landscape`; `auto` = omesso). I valori non impostati
+vengono omessi, così si usa il default della stampante (retro-compatibile).
+Queste opzioni valgono sia per la stampa automatica dei badge sia per il Test Print.
+
+**Test Print = badge reale con dati di esempio:** il Test Print non stampa più una pagina diagnostica separata, ma renderizza il **layout badge reale** (stesso `generateBadgePdf` dell'auto-print) con dati fittizi (`testPrintBadge` in `server/index.js`), così il formato/dimensione della stampa di prova coincide con quello effettivo. Riceve un `override` con le impostazioni di stampa correnti dei dropdown (stampante, formato, scala, orientamento), quindi si può verificare l'A5 anche prima di salvare la config.
+
 ```javascript
-async function downloadAndPrint(pdfBuffer) {
+function buildPrintOptions(printerOverride) {
+  const cfg = getConfig();
+  const options = {};
+  const printer = printerOverride || selectedPrinter;
+  if (printer) options.printer = printer;
+  if (cfg.PRINT_PAPER_SIZE) options.paperSize = cfg.PRINT_PAPER_SIZE;
+  if (cfg.PRINT_SCALE)      options.scale     = cfg.PRINT_SCALE;
+  if (cfg.PRINT_ORIENTATION && cfg.PRINT_ORIENTATION !== 'auto') {
+    options.orientation = cfg.PRINT_ORIENTATION;
+  }
+  return options;
+}
+
+async function downloadAndPrint(pdfBuffer, printerOverride) {
   const tmpPath = path.join(os.tmpdir(), `ticket_${Date.now()}.pdf`);
   fs.writeFileSync(tmpPath, Buffer.from(pdfBuffer));
-  const options = selectedPrinter ? { printer: selectedPrinter } : {};
-  await print(tmpPath, options);
+  await print(tmpPath, buildPrintOptions(printerOverride));
   fs.unlinkSync(tmpPath);
 }
 ```
@@ -282,7 +306,7 @@ ipcMain.handle('set-printer',          (_, name) => setSelectedPrinter(name));
 ipcMain.handle('get-selected-printer', () => getSelectedPrinter());
 ipcMain.handle('set-auto-print',       (_, value) => setAutoPrint(value));
 ipcMain.handle('get-log',              () => getRecentPrints(50));
-ipcMain.handle('test-print',           async () => await testPrint());
+ipcMain.handle('test-print',           async (_, override) => await testPrintBadge(override));
 ipcMain.handle('get-config',           () => getConfig());
 ipcMain.handle('save-config',          (_, cfg) => saveConfig(cfg));
 ipcMain.handle('check-status',         async () => await checkStatus());
@@ -295,7 +319,11 @@ ipcMain.handle('check-status',         async () => await checkStatus());
 The UI includes a printer selector, auto-print toggle, test print button, and print log table.
 See `renderer/index.html` and `renderer/renderer.js` for implementation.
 
-**Test Print e stampante selezionata:** il bottone **Test Print** stampa sulla stampante attualmente selezionata nel dropdown, **anche se la configurazione non è ancora stata salvata**. Il valore del dropdown viene passato esplicitamente come override (`testPrint(printer)` → `downloadAndPrint(pdfBuffer, printerOverride)`), quindi non serve salvare prima di testare. La `selectedPrinter` persistente (usata dalla stampa automatica dei badge) viene invece aggiornata solo al salvataggio della config.
+**Test Print (badge reale + selezione corrente):** il bottone **Test Print** renderizza il layout badge reale con dati di esempio (vedi `testPrintBadge` in sez. 9) e lo stampa usando la stampante e le impostazioni di stampa **attualmente selezionate nei dropdown**, **anche se la configurazione non è ancora stata salvata**. I valori correnti (stampante, formato, scala, orientamento) vengono passati come `override` a `testPrint(override)` → `downloadAndPrint(pdfBuffer, override)`, quindi non serve salvare prima di testare. La `selectedPrinter` persistente e le impostazioni salvate (usate dalla stampa automatica) vengono aggiornate solo al salvataggio della config.
+
+**Update layout badge e selezione corrente:** il bottone **Update** del layout badge ricarica il layout per l'organizzatore/evento **attualmente selezionati nei dropdown**, anche prima di salvare. I valori correnti (token, organizzatore, evento) vengono passati come override esplicito (`refreshBadgeCache(override)` → `warmBadgeCache(override)` → `getDefaultBadgeLayout(override)`, risolto da `resolvePretix(override)` in `pretixApi.js`). Senza override le funzioni continuano a usare la config salvata.
+
+**Svuotamento check-in al cambio evento (con conferma):** se al salvataggio l'organizzatore o l'evento risultano **diversi** dai precedenti, il renderer mostra un `confirm()` di avviso ("i check-in precedenti verranno eliminati"). Se l'utente annulla, il salvataggio viene interrotto (evento e check-in correnti restano invariati). Se conferma, l'handler `save-config` in `electron.js` rileva il cambio e invoca `clearCheckins()`, poi il renderer aggiorna la tabella. La conferma **non** appare al primo setup (quando non c'era ancora un organizzatore/evento) né salvando senza cambiare evento (es. solo intervallo polling): in quei casi i check-in vengono preservati.
 
 ### Unsaved Changes Tracking (Config tab)
 
@@ -321,8 +349,12 @@ I parametri vengono salvati in `data/config.json` e ricaricati automaticamente a
 | Intervallo polling | Secondi tra una chiamata e l'altra all'API (default: 5). Modificabile dalla UI; richiede riavvio. |
 | Stampante selezionata | Nome della stampante scelta nella Dashboard; salvata in `data/config.json` e ripristinata all'avvio. |
 | Usa sfondo badge | Se abilitato, scarica il PDF di sfondo dal layout badge default di Pretix e lo usa come base per la stampa. |
+| Formato carta (`PRINT_PAPER_SIZE`) | Formato passato alla stampante: `A4`/`A5`/`A6`/`Letter`, oppure vuoto = default stampante. Default UI: **A5**. |
+| Scala (`PRINT_SCALE`) | `noscale` (dimensione reale 1:1), `fit` (adatta alla pagina), `shrink` (riduci se necessario). Default UI: **noscale**. |
+| Orientamento (`PRINT_ORIENTATION`) | `auto` (default stampante), `portrait` (verticale), `landscape` (orizzontale). Default UI: **auto**. |
 
 > Non esistono più file `.env` nel progetto.
+> Le impostazioni di stampa (formato/scala/orientamento) sono nel pannello **Impostazioni di stampa** della scheda Configurazione, colonna *Stampa*.
 
 ---
 

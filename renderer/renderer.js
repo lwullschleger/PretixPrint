@@ -1,4 +1,4 @@
-const CONFIG_KEYS = ['PRETIX_API_TOKEN', 'POLL_INTERVAL'];
+const CONFIG_KEYS = ['PRETIX_API_TOKEN', 'POLL_INTERVAL', 'PRINT_PAPER_SIZE', 'PRINT_SCALE', 'PRINT_ORIENTATION'];
 
 // ── Error modal ───────────────────────────────────────────────
 const _errorQueue = [];
@@ -96,9 +96,15 @@ async function init() {
     testBtn.disabled = true;
     testBtn.textContent = 'Stampa in corso...';
     try {
-      // Test the printer currently selected in the dropdown, even if the
-      // config hasn't been saved yet.
-      await window.api.testPrint(select.value);
+      // Test print renders the real badge layout with sample data, using the
+      // printer and print settings currently selected in the dropdowns — even
+      // if the config hasn't been saved yet.
+      await window.api.testPrint({
+        printer:     select.value,
+        paperSize:   document.getElementById('cfg-PRINT_PAPER_SIZE').value,
+        scale:       document.getElementById('cfg-PRINT_SCALE').value,
+        orientation: document.getElementById('cfg-PRINT_ORIENTATION').value
+      });
       testBtn.textContent = 'Fatto!';
     } catch {
       testBtn.textContent = 'Errore';
@@ -128,6 +134,10 @@ async function init() {
     }
   });
   startPollCountdown(parseInt(cfg.POLL_INTERVAL) || 5);
+  // Default print settings when never saved: A5 badge printed 1:1.
+  if (!cfg.PRINT_PAPER_SIZE)  document.getElementById('cfg-PRINT_PAPER_SIZE').value  = 'A5';
+  if (!cfg.PRINT_SCALE)       document.getElementById('cfg-PRINT_SCALE').value       = 'noscale';
+  if (!cfg.PRINT_ORIENTATION) document.getElementById('cfg-PRINT_ORIENTATION').value = 'auto';
   badgeBgToggle.checked = cfg.BADGE_USE_BACKGROUND === 'true';
   toggle.checked = cfg.AUTO_PRINT !== 'false';
   updateAutoPrintWarning(toggle.checked);
@@ -213,6 +223,19 @@ async function init() {
     newCfg.PRETIX_EVENT = eventSelect.value;
     newCfg.BADGE_USE_BACKGROUND = String(badgeBgToggle.checked);
     newCfg.AUTO_PRINT = String(toggle.checked);
+
+    // If organizer/event changed, the previous check-ins no longer apply and
+    // will be deleted on save — ask the user before proceeding.
+    const savedCfg = await window.api.getConfig();
+    const hadEvent = !!(savedCfg.PRETIX_ORGANIZER || savedCfg.PRETIX_EVENT);
+    const eventChanged = hadEvent
+      && (newCfg.PRETIX_ORGANIZER !== (savedCfg.PRETIX_ORGANIZER || '')
+       || newCfg.PRETIX_EVENT     !== (savedCfg.PRETIX_EVENT     || ''));
+    if (eventChanged) {
+      const ok = confirm('Hai cambiato organizzatore o evento.\nI check-in precedenti verranno eliminati perché non appartengono al nuovo evento.\n\nContinuare?');
+      if (!ok) return; // abort save: keep current event and its check-ins
+    }
+
     await window.api.setPrinter(select.value);
     window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);
@@ -223,6 +246,7 @@ async function init() {
     saveStatus.textContent = 'Salvato!';
     setTimeout(() => { saveStatus.textContent = ''; }, 2500);
     checkStatus(); // refresh status bar after saving
+    if (eventChanged) await refreshLog(); // check-ins were cleared: refresh the table
   });
 
   // ── Clear checkins ────────────────────────────────────────────
@@ -243,7 +267,13 @@ async function init() {
     const btn = document.getElementById('updateBadgeLayoutBtn');
     btn.disabled = true;
     btn.textContent = '…';
-    await window.api.refreshBadgeCache();
+    // Load the layout for the selection currently in the dropdowns, even if
+    // the config hasn't been saved yet.
+    await window.api.refreshBadgeCache({
+      token: document.getElementById('cfg-PRETIX_API_TOKEN').value.trim(),
+      org:   orgSelect.value,
+      event: eventSelect.value
+    });
     await refreshBadgeLayoutName();
     btn.textContent = 'Update';
     btn.disabled = false;

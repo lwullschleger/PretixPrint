@@ -51,6 +51,23 @@ async function previewPosition(positionId) {
   return generateBadgePdf('', details);
 }
 
+// Test print: render the real badge layout with sample data, so the printout
+// matches the actual badge format/size. `override` carries the current (not yet
+// saved) print settings from the Config dropdowns (printer, paper size, scale…).
+async function testPrintBadge(override) {
+  const sample = {
+    name:             'Mario Rossi',
+    first_name:       'Mario',
+    last_name:        'Rossi',
+    attendee_company: 'ACME S.r.l.',
+    attendee_email:   'mario.rossi@example.com',
+    order_code:       'TEST01',
+    secret:           'TEST-BADGE-0000'
+  };
+  const pdfBuffer = await generateBadgePdf('TEST01', sample);
+  await downloadAndPrint(pdfBuffer, override);
+}
+
 function startPolling() {
   const intervalMs = (parseInt(getConfig().POLL_INTERVAL) || 5) * 1000;
   pollTimer = setInterval(async () => {
@@ -95,4 +112,4 @@ function startPolling() {
 
 startPolling();
 
-module.exports = { setAutoPrint: (v) => { autoPrint = v; }, reprintPosition, previewPosition };
+module.exports = { setAutoPrint: (v) => { autoPrint = v; }, reprintPosition, previewPosition, testPrintBadge };

@@ -16,6 +16,17 @@ function logCall(method, url, status, ok, debug = false) {
 
 function getApiLog() { return apiLog; }
 
+// Resolve organizer/event/token from the saved config, allowing an optional
+// override (e.g. the not-yet-saved selection from the Config dropdowns).
+function resolvePretix(override) {
+  const cfg = getConfig();
+  return {
+    ORG:   override?.org   || cfg.PRETIX_ORGANIZER,
+    EVENT: override?.event || cfg.PRETIX_EVENT,
+    TOKEN: override?.token || cfg.PRETIX_API_TOKEN
+  };
+}
+
 // ── API functions ─────────────────────────────────────────────
 async function getBadgePDF(positionId) {
   const { PRETIX_ORGANIZER: ORG, PRETIX_EVENT: EVENT, PRETIX_API_TOKEN: TOKEN } = getConfig();
@@ -69,9 +80,9 @@ function clearBadgeLayoutCache() {
   _backgroundBytesCache = null;
 }
 
-async function getDefaultBadgeLayout() {
+async function getDefaultBadgeLayout(override) {
   if (_badgeLayoutCache) return _badgeLayoutCache;
-  const { PRETIX_ORGANIZER: ORG, PRETIX_EVENT: EVENT, PRETIX_API_TOKEN: TOKEN } = getConfig();
+  const { ORG, EVENT, TOKEN } = resolvePretix(override);
   const url = `${BASE}/organizers/${ORG}/events/${EVENT}/badgelayouts/`;
   try {
     const res = await axios.get(url, { headers: { Authorization: `Token ${TOKEN}` } });
@@ -85,8 +96,8 @@ async function getDefaultBadgeLayout() {
   }
 }
 
-async function downloadBackground(backgroundUrl) {
-  const { PRETIX_API_TOKEN: TOKEN } = getConfig();
+async function downloadBackground(backgroundUrl, tokenOverride) {
+  const TOKEN = tokenOverride || getConfig().PRETIX_API_TOKEN;
   try {
     const res = await axios.get(backgroundUrl, {
       headers: { Authorization: `Token ${TOKEN}` },
@@ -99,17 +110,17 @@ async function downloadBackground(backgroundUrl) {
   }
 }
 
-async function getCachedBackground(backgroundUrl) {
+async function getCachedBackground(backgroundUrl, tokenOverride) {
   if (_backgroundBytesCache) return _backgroundBytesCache;
-  _backgroundBytesCache = await downloadBackground(backgroundUrl);
+  _backgroundBytesCache = await downloadBackground(backgroundUrl, tokenOverride);
   return _backgroundBytesCache;
 }
 
-async function warmBadgeCache() {
+async function warmBadgeCache(override) {
   try {
-    const layout = await getDefaultBadgeLayout();
+    const layout = await getDefaultBadgeLayout(override);
     if (layout && layout.background && typeof layout.background === 'string') {
-      await getCachedBackground(layout.background);
+      await getCachedBackground(layout.background, override?.token);
     }
     console.log('Badge cache pronta.');
   } catch (err) {
@@ -121,9 +132,9 @@ function getBadgeLayoutName() {
   return _badgeLayoutCache?.name || null;
 }
 
-async function refreshBadgeCache() {
+async function refreshBadgeCache(override) {
   clearBadgeLayoutCache();
-  await warmBadgeCache();
+  await warmBadgeCache(override);
   return getBadgeLayoutName();
 }
 

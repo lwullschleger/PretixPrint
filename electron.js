@@ -8,9 +8,9 @@ const fs = require('fs');
 process.env.DATA_DIR = app.getPath('userData');
 
 const { getPrinters } = require('pdf-to-printer');
-const { setSelectedPrinter, getSelectedPrinter, testPrint } = require('./server/printer');
+const { setSelectedPrinter, getSelectedPrinter } = require('./server/printer');
 const { getRecentPrints, clearCheckins } = require('./server/db');
-const { setAutoPrint, reprintPosition, previewPosition } = require('./server/index');
+const { setAutoPrint, reprintPosition, previewPosition, testPrintBadge } = require('./server/index');
 const { getConfig, saveConfig } = require('./server/config');
 const { checkStatus, getApiLog, getOrganizers, getEvents, clearBadgeLayoutCache, warmBadgeCache, getBadgeLayoutName, refreshBadgeCache } = require('./server/pretixApi');
 
@@ -73,9 +73,20 @@ ipcMain.handle('set-printer',       (_, name) => { setSelectedPrinter(name); sav
 ipcMain.handle('get-selected-printer', () => getSelectedPrinter());
 ipcMain.handle('set-auto-print',    (_, value) => setAutoPrint(value));
 ipcMain.handle('get-log',           () => getRecentPrints(50));
-ipcMain.handle('test-print',        async (_, printer) => await testPrint(printer));
+ipcMain.handle('test-print',        async (_, override) => await testPrintBadge(override));
 ipcMain.handle('get-config',        () => getConfig());
-ipcMain.handle('save-config',       (_, cfg) => { clearBadgeLayoutCache(); saveConfig({ ...getConfig(), ...cfg }); });
+ipcMain.handle('save-config',       (_, cfg) => {
+  const prev = getConfig();
+  const hadEvent = !!(prev.PRETIX_ORGANIZER || prev.PRETIX_EVENT);
+  const eventChanged = hadEvent
+    && ((cfg.PRETIX_ORGANIZER !== undefined && cfg.PRETIX_ORGANIZER !== prev.PRETIX_ORGANIZER)
+     || (cfg.PRETIX_EVENT     !== undefined && cfg.PRETIX_EVENT     !== prev.PRETIX_EVENT));
+  clearBadgeLayoutCache();
+  saveConfig({ ...prev, ...cfg });
+  // Switching organizer/event invalidates the previous check-ins, so drop them.
+  // The renderer asks the user for confirmation before triggering this save.
+  if (eventChanged) clearCheckins();
+});
 ipcMain.handle('check-status',      async () => await checkStatus());
 ipcMain.handle('get-api-log',       () => getApiLog());
 ipcMain.handle('get-organizers',    (_, token) => getOrganizers(token));
@@ -84,7 +95,7 @@ ipcMain.handle('reprint-badge',         (_, logId, positionId) => reprintPositio
 ipcMain.handle('get-version',           () => app.getVersion());
 ipcMain.handle('clear-checkins',        () => clearCheckins());
 ipcMain.handle('get-badge-layout-name', () => getBadgeLayoutName());
-ipcMain.handle('refresh-badge-cache',   () => refreshBadgeCache());
+ipcMain.handle('refresh-badge-cache',   (_, override) => refreshBadgeCache(override));
 ipcMain.handle('preview-badge',     async (_, logId, positionId) => {
   const pdfBuffer = await previewPosition(positionId);
   const tmpPath = path.join(os.tmpdir(), `badge_preview_${logId}.pdf`);

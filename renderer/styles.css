@@ -330,6 +330,28 @@ tr:hover td { background: #f9f9f9; }
   align-items: center;
 }
 
+.print-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.print-setting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.print-setting span {
+  width: 110px;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.print-setting select {
+  flex: 1;
+}
+
 .printer-row select, .token-row input {
   flex: 1;
 }

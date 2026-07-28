@@ -6,7 +6,7 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 const configPath = path.join(dataDir, 'config.json');
 
-const KEYS = ['PRETIX_API_TOKEN', 'PRETIX_ORGANIZER', 'PRETIX_EVENT', 'POLL_INTERVAL', 'SELECTED_PRINTER', 'BADGE_USE_BACKGROUND', 'AUTO_PRINT'];
+const KEYS = ['PRETIX_API_TOKEN', 'PRETIX_ORGANIZER', 'PRETIX_EVENT', 'POLL_INTERVAL', 'SELECTED_PRINTER', 'BADGE_USE_BACKGROUND', 'AUTO_PRINT', 'PRINT_PAPER_SIZE', 'PRINT_SCALE', 'PRINT_ORIENTATION'];
 
 // Returns merged config: data/config.json takes priority over process.env (from .env)
 function getConfig() {
