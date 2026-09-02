@@ -32,6 +32,9 @@ function parseColor(color) {
 }
 
 // ── Dynamic content resolution ────────────────────────────────
+// Name parts we can resolve from the fixed Pretix fields (given/family only)
+const NAME_PARTS = ['given_name', 'family_name'];
+
 function resolveContent(el, values) {
   const c = el.content;
   if (c === 'other')      return el.text || '';
@@ -39,7 +42,21 @@ function resolveContent(el, values) {
     const t = el.text_i18n || {};
     return t.it || t.en || Object.values(t)[0] || '';
   }
-  return values[c] !== undefined ? String(values[c]) : '';
+  if (values[c] !== undefined) return String(values[c]);
+  // Composite name keys from the Pretix badge editor, e.g.
+  // "attendee_name_given_name_family_name": join the known parts in the
+  // order they appear in the key; fall back to the full attendee name.
+  if (c && c.startsWith('attendee_name')) {
+    const parts = NAME_PARTS
+      .map(p => ({ p, i: c.indexOf(p) }))
+      .filter(x => x.i >= 0)
+      .sort((a, b) => a.i - b.i)
+      .map(x => values[`attendee_name:${x.p}`])
+      .filter(Boolean);
+    if (parts.length) return parts.join(' ');
+    return values.attendee_name !== undefined ? String(values.attendee_name) : '';
+  }
+  return '';
 }
 
 // ── Word wrap ─────────────────────────────────────────────────

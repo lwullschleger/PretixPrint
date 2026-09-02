@@ -259,6 +259,18 @@ async function getRecentCheckins(since) {
 }
 ```
 
+### Badge Renderer (`server/badgeRenderer.js`) — risoluzione contenuto campi
+
+`resolveContent(el, values)` mappa il campo `content` di ogni elemento del layout
+Pretix sui valori del partecipante. Oltre alle chiavi dirette (`attendee_name`,
+`attendee_name:given_name`, `attendee_name:family_name`, `attendee_company`,
+`attendee_email`, `order_code`, `secret`) gestisce le **chiavi composte del nome**
+generate dall'editor badge di Pretix (es. `attendee_name_given_name_family_name`,
+scelta "Nome Cognome"): le parti note (`given_name`, `family_name`) vengono unite
+nell'ordine in cui compaiono nella chiave; se nessuna parte è riconosciuta si usa
+il nome completo `attendee_name` come fallback. Senza questa gestione i campi con
+chiave composta risultavano vuoti e venivano saltati (nome mancante sul badge).
+
 ---
 
 ## 9. Printer Module (`server/printer.js`)
