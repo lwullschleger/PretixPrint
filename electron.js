@@ -10,7 +10,7 @@ process.env.DATA_DIR = app.getPath('userData');
 const { getPrinters } = require('pdf-to-printer');
 const { setSelectedPrinter, getSelectedPrinter } = require('./server/printer');
 const { getRecentPrints, clearCheckins } = require('./server/db');
-const { setAutoPrint, reprintPosition, previewPosition, testPrintBadge } = require('./server/index');
+const { setAutoPrint, reprintPosition, previewPosition, testPrintBadge, resumePolling } = require('./server/index');
 const { getConfig, saveConfig } = require('./server/config');
 const { checkStatus, getApiLog, getOrganizers, getEvents, clearBadgeLayoutCache, warmBadgeCache, getBadgeLayoutName, refreshBadgeCache } = require('./server/pretixApi');
 
@@ -83,6 +83,8 @@ ipcMain.handle('save-config',       (_, cfg) => {
      || (cfg.PRETIX_EVENT     !== undefined && cfg.PRETIX_EVENT     !== prev.PRETIX_EVENT));
   clearBadgeLayoutCache();
   saveConfig({ ...prev, ...cfg });
+  // A saved config may fix the token/organizer/event, so lift any poll suspension
+  resumePolling();
   // Switching organizer/event invalidates the previous check-ins, so drop them.
   // The renderer asks the user for confirmation before triggering this save.
   if (eventChanged) clearCheckins();

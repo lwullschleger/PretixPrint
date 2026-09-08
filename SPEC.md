@@ -160,34 +160,15 @@ GET /api/v1/organizers/{org}/events/{event}/checkins/
    - Stampa il PDF → log su JSON
 5. In caso di errore di rete: `lastPollTime` NON avanza → riprova al prossimo tick
 
-```javascript
-let autoPrint = true;
-let lastPollTime = new Date().toISOString();
-let pollTimer = null;
+**Gestione errori del polling (anti-spam):**
 
-function startPolling() {
-  const intervalMs = (parseInt(getConfig().POLL_INTERVAL) || 5) * 1000;
-  pollTimer = setInterval(async () => {
-    const since = lastPollTime;
-    const now = new Date().toISOString();
-    try {
-      const checkins = await getRecentCheckins(since);
-      lastPollTime = now;
-      for (const checkin of checkins) {
-        if (!autoPrint) continue;
-        const pdfBuffer = await getTicketPDF(checkin.order, checkin.position);
-        await downloadAndPrint(pdfBuffer);
-        logPrint({ order: checkin.order, positionid: checkin.position, timestamp: checkin.datetime });
-      }
-    } catch (err) {
-      console.error('Polling error:', err.message);
-    }
-  }, intervalMs);
-}
+Il timer parte sempre, ma ogni tick esegue dei controlli preliminari per evitare di generare un errore a video ad ogni ciclo:
 
-startPolling();
-module.exports = { setAutoPrint: (v) => { autoPrint = v; } };
-```
+1. **Configurazione incompleta** — se `PRETIX_API_TOKEN`, `PRETIX_ORGANIZER` o `PRETIX_EVENT` sono vuoti, il tick viene saltato senza chiamare l'API (un solo `console.log` informativo, non un errore). Appena la configurazione è completa, il polling riprende da solo al tick successivo.
+2. **Errore di accesso (HTTP 401/403/404)** — token invalido/revocato oppure organizer/evento inesistenti: viene loggato **un solo** `console.error` (che il main process inoltra alla UI) e il polling viene **sospeso** (`pollSuspended = true`). La sospensione viene rimossa da `resumePolling()`, chiamata dall'handler IPC `save-config` in `electron.js` quando l'utente salva la configurazione.
+3. **Errore transitorio (rete, timeout, 5xx)** — il polling continua a riprovare ad ogni tick, ma l'errore viene loggato solo al passaggio di stato OK→errore (`networkErrorActive`); al ripristino della connessione viene loggato un messaggio informativo e il flag si azzera.
+
+Funzioni esportate da `server/index.js`: `setAutoPrint`, `reprintPosition`, `previewPosition`, `testPrintBadge`, `resumePolling`.
 
 ---
 

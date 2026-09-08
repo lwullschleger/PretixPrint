@@ -8,6 +8,19 @@ let autoPrint = getConfig().AUTO_PRINT !== 'false';
 let lastPollTime = new Date().toISOString();
 let pollTimer = null;
 
+// Polling state: suspended on auth/config errors (401/403/404) until the
+// config is saved again; transient network errors are logged only on the
+// OK→error transition to avoid one popup per tick.
+let pollSuspended = false;
+let waitingForConfigLogged = false;
+let networkErrorActive = false;
+
+function resumePolling() {
+  pollSuspended = false;
+  waitingForConfigLogged = false;
+  networkErrorActive = false;
+}
+
 async function generateBadgePdf(order, details) {
   const cfg = getConfig();
   const showBackground = cfg.BADGE_USE_BACKGROUND === 'true';
@@ -71,12 +84,30 @@ async function testPrintBadge(override) {
 function startPolling() {
   const intervalMs = (parseInt(getConfig().POLL_INTERVAL) || 5) * 1000;
   pollTimer = setInterval(async () => {
+    // Snapshot config at the start of this tick to detect mid-cycle changes
+    const { PRETIX_API_TOKEN: pollToken, PRETIX_ORGANIZER: pollOrg, PRETIX_EVENT: pollEvent } = getConfig();
+
+    // Incomplete config: skip silently (resumes on its own once configured)
+    if (!pollToken || !pollOrg || !pollEvent) {
+      if (!waitingForConfigLogged) {
+        console.log('Polling in attesa di configurazione (token/organizer/evento mancanti).');
+        waitingForConfigLogged = true;
+      }
+      return;
+    }
+    waitingForConfigLogged = false;
+
+    // Suspended after an auth/config error: wait for the config to be saved again
+    if (pollSuspended) return;
+
     const since = lastPollTime;
     const now = new Date().toISOString();
-    // Snapshot config at the start of this tick to detect mid-cycle changes
-    const { PRETIX_ORGANIZER: pollOrg, PRETIX_EVENT: pollEvent } = getConfig();
     try {
       const checkins = await getRecentCheckins(since);
+      if (networkErrorActive) {
+        console.log('Polling ripristinato: connessione a Pretix di nuovo attiva.');
+        networkErrorActive = false;
+      }
       lastPollTime = now;
       for (const checkin of checkins) {
         // Verify config hasn't changed since the API call was made
@@ -104,7 +135,16 @@ function startPolling() {
         }
       }
     } catch (err) {
-      console.error('Polling error:', err.message);
+      const status = err.response?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        // Auth/config error: report once and suspend until the config is saved again
+        pollSuspended = true;
+        console.error(`Polling sospeso: errore di accesso a Pretix (HTTP ${status}). Verifica token, organizer ed evento nella configurazione.`);
+      } else if (!networkErrorActive) {
+        // Transient error (network, timeout, 5xx): log only on state change, keep retrying
+        networkErrorActive = true;
+        console.error('Polling error:', err.message);
+      }
     }
   }, intervalMs);
   console.log(`Polling check-in ogni ${intervalMs / 1000}s`);
@@ -112,4 +152,4 @@ function startPolling() {
 
 startPolling();
 
-module.exports = { setAutoPrint: (v) => { autoPrint = v; }, reprintPosition, previewPosition, testPrintBadge };
+module.exports = { setAutoPrint: (v) => { autoPrint = v; }, reprintPosition, previewPosition, testPrintBadge, resumePolling };
