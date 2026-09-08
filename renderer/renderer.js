@@ -46,6 +46,28 @@ function updateAutoPrintWarning(active) {
   el.style.display = active ? 'none' : 'inline-block';
 }
 
+// ── Required Pretix config fields ─────────────────────────────
+const REQUIRED_PRETIX_FIELDS = ['PRETIX_API_TOKEN', 'PRETIX_ORGANIZER', 'PRETIX_EVENT'];
+
+function setFieldMissing(key, missing) {
+  const input = document.getElementById(`cfg-${key}`);
+  if (!input) return;
+  input.classList.toggle('field-missing', missing);
+  const label = input.closest('.form-group')?.querySelector('label');
+  label?.classList.toggle('label-missing', missing);
+}
+
+// Marks empty required fields in red; returns true if any is missing.
+function markMissingConfig(values) {
+  let anyMissing = false;
+  REQUIRED_PRETIX_FIELDS.forEach(key => {
+    const missing = !(values[key] || '').trim();
+    setFieldMissing(key, missing);
+    if (missing) anyMissing = true;
+  });
+  return anyMissing;
+}
+
 function setConfigDirty(dirty) {
   configDirty = dirty;
   const saveBtn = document.getElementById('saveConfigBtn');
@@ -212,6 +234,24 @@ async function init() {
     await populateOrganizers(cfg.PRETIX_API_TOKEN, cfg.PRETIX_ORGANIZER, cfg.PRETIX_EVENT);
   }
 
+  // ── Missing config redirect ───────────────────────────────────
+  // On startup, if token/organizer/event are not configured, switch to the
+  // Config tab and mark the missing fields in red. The red mark is cleared
+  // as soon as the user fills each field.
+  document.getElementById('cfg-PRETIX_API_TOKEN').addEventListener('input', function () {
+    if (this.value.trim()) setFieldMissing('PRETIX_API_TOKEN', false);
+  });
+  orgSelect.addEventListener('change', () => {
+    if (orgSelect.value) setFieldMissing('PRETIX_ORGANIZER', false);
+  });
+  eventSelect.addEventListener('change', () => {
+    if (eventSelect.value) setFieldMissing('PRETIX_EVENT', false);
+  });
+
+  if (markMissingConfig(cfg)) {
+    document.querySelector('.tab-btn[data-tab="config"]').click();
+  }
+
   document.getElementById('configForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newCfg = {};
@@ -239,6 +279,7 @@ async function init() {
     await window.api.setPrinter(select.value);
     window.api.setAutoPrint(toggle.checked);
     await window.api.saveConfig(newCfg);
+    markMissingConfig(newCfg);
     setConfigDirty(false);
     updateAutoPrintWarning(toggle.checked);
     startPollCountdown(parseInt(newCfg.POLL_INTERVAL) || 5);

@@ -371,6 +371,23 @@ tr:hover td { background: #f9f9f9; }
   cursor: not-allowed;
 }
 
+/* Required Pretix fields missing: highlighted when the app redirects to Config */
+.form-group input.field-missing,
+.form-group select.field-missing {
+  border-color: #c62828;
+  box-shadow: 0 0 0 2px rgba(198,40,40,0.15);
+}
+
+.form-group label.label-missing {
+  color: #c62828;
+}
+
+.form-group label.label-missing::after {
+  content: ' — campo obbligatorio';
+  font-weight: normal;
+  font-size: 0.8rem;
+}
+
 .form-actions {
   display: flex;
   align-items: center;

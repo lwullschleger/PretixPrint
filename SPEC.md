@@ -318,6 +318,8 @@ See `renderer/index.html` and `renderer/renderer.js` for implementation.
 
 **Svuotamento check-in al cambio evento (con conferma):** se al salvataggio l'organizzatore o l'evento risultano **diversi** dai precedenti, il renderer mostra un `confirm()` di avviso ("i check-in precedenti verranno eliminati"). Se l'utente annulla, il salvataggio viene interrotto (evento e check-in correnti restano invariati). Se conferma, l'handler `save-config` in `electron.js` rileva il cambio e invoca `clearCheckins()`, poi il renderer aggiorna la tabella. La conferma **non** appare al primo setup (quando non c'era ancora un organizzatore/evento) né salvando senza cambiare evento (es. solo intervallo polling): in quei casi i check-in vengono preservati.
 
+**Redirect automatico alla Config con campi mancanti:** all'avvio, se nella configurazione salvata mancano **API token**, **organizzatore** o **evento**, il renderer passa automaticamente alla scheda **Configurazione** ed evidenzia in rosso i campi mancanti (bordo rosso + label rossa con suffisso *"— campo obbligatorio"*, classi CSS `field-missing`/`label-missing`). L'evidenziazione di ogni campo scompare appena l'utente lo compila (listener `input`/`change`); al salvataggio i campi ancora vuoti vengono ri-evidenziati (`markMissingConfig`). Lato backend il polling resta comunque silenzioso finché la config è incompleta (vedi sez. 6).
+
 ### Unsaved Changes Tracking (Config tab)
 
 La scheda **Configurazione** traccia le modifiche non salvate con un flag `configDirty`:
